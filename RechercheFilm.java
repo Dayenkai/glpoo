@@ -6,6 +6,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
+
+//java -cp ".:sqlite-jdbc-3.27.2.1.jar" Main
 public class RechercheFilm {
     private Connection _connection;
     private String[] _keywords = {"titre", "de", "avec", "pays", "en", "avant", "apres"};
@@ -33,35 +35,42 @@ public class RechercheFilm {
     public String retrouve(String requete){
         HashMap<String, String> data = new HashMap<String, String>();
         String word = "";
-        String actualKey= "";
-        /*
-        String[] toto = {"ta", "mère", "koko"};
-        String[] dodo = {"1", "2", "3", "4"};
-        dodo = splice(dodo, 0, 2);
-        System.out.println(Arrays.toString(dodo));
-        */
+        String actualKey= "", tKey="";
+        requete +=" ";
 
         for(int i=0; i<requete.length(); i++){
+
             if(requete.charAt(i)== ' '){
+                word.toLowerCase();
+
                 if(Arrays.asList(_keywords).contains(word)){
-                    data.put(word.toLowerCase(), null);
+                    data.put(word, null);
                     actualKey = word;
+
+                }else if(actualKey == ""){
+                    data.replace(tKey, data.get(tKey), data.get(tKey) + " " + word);
+                    //System.out.println(tKey + " : " + data.get(tKey));
+                    tKey="";
+                }else if(word== "ou"){
+
                 }else{
-                    data.replace(actualKey, null, word.toLowerCase());
+
+                    //System.out.println(actualKey + " : " + word);
+                    data.replace(actualKey, null, word);
+                    tKey=actualKey;
                     actualKey="";
                 }
                 word = "";
+
+            }else {
+                word += requete.charAt(i);
             }
-
-            word += requete.charAt(i);
-
-
+            
         }
 
-        for (String name: data.keySet()){
-            String key = name;
-            String value = data.get(name);
-            System.out.println(key + " " + value + "\n");
+        //print map
+        for (Map.Entry<String, String> entry : data.entrySet()) {
+            System.out.println("Key: " + entry.getKey() + ". Value: " + entry.getValue());
         }
 
         return "";

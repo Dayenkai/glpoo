@@ -5,8 +5,8 @@ public class Main {
     public static void main(String[] args) {
         RechercheFilm uneRecherche = new RechercheFilm("bdfilm");
 
-        uneRecherche.fermeBase();
+        uneRecherche.retrouve("de hitchcock, avec lamar");
 
-        uneRecherche.retrouve("DE Hitchcock, AVEC MattPokora");
+        uneRecherche.fermeBase();
     }
 }
