@@ -3,9 +3,12 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.Arrays;
-import java.util.HashMap;
+import java.util.TreeMap;
 import java.util.Map;
 
+/***
+ * 
+ */
 
 //java -cp ".:sqlite-jdbc-3.27.2.1.jar" Main
 public class RechercheFilm {
@@ -33,7 +36,7 @@ public class RechercheFilm {
     }
 
     public String retrouve(String requete){
-        HashMap<String, String> data = new HashMap<String, String>();
+        TreeMap<String, String> data = new TreeMap<String, String>();
         String word = "";
         String actualKey= "", tKey="";
         requete +=" ";
@@ -44,21 +47,26 @@ public class RechercheFilm {
                 word.toLowerCase();
 
                 if(Arrays.asList(_keywords).contains(word)){
-                    data.put(word, null);
+                    if(!data.containsKey(word))
+                        data.put(word, null);
                     actualKey = word;
 
                 }else if(actualKey == ""){
                     data.replace(tKey, data.get(tKey), data.get(tKey) + " " + word);
-                    //System.out.println(tKey + " : " + data.get(tKey));
                     tKey="";
-                }else if(word== "ou"){
+
+                }else if(word == "ou"){
+                   data.replace(tKey, data.get(tKey), data.get(tKey) + " " + word);
+                   actualKey = "";
+                  
 
                 }else{
-
-                    //System.out.println(actualKey + " : " + word);
-                    data.replace(actualKey, null, word);
+                    //si la clé existe déjà, on rajoute la valeur à la clé déjà existante
+                    if(data.get(actualKey) != null)
+                        data.replace(actualKey, data.get(actualKey), data.get(actualKey) + " " + word);
+                    else
+                        data.replace(actualKey, null, word);
                     tKey=actualKey;
-                    actualKey="";
                 }
                 word = "";
 
@@ -92,4 +100,8 @@ public class RechercheFilm {
         return spliced;
     }
 
+    public String analyzeRequest(TreeMap<String, String> user_req){
+
+        return "";
+    }
 }
