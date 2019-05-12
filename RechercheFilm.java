@@ -3,7 +3,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.Arrays;
-import java.util.TreeMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /***
@@ -36,11 +36,11 @@ public class RechercheFilm {
     }
 
     public String retrouve(String requete){
-        TreeMap<String, String> data = new TreeMap<String, String>();
+        LinkedHashMap<String, String> data = new LinkedHashMap<String, String>();
         String word = "";
         String actualKey= "", tKey="";
         requete +=" ";
-
+       
         for(int i=0; i<requete.length(); i++){
 
             if(requete.charAt(i)== ' '){
@@ -100,7 +100,7 @@ public class RechercheFilm {
         return spliced;
     }
 
-    public String analyzeRequest(TreeMap<String, String> user_req){
+    public String analyzeRequest(LinkedHashMap<String, String> user_req){
 
         return "";
     }
