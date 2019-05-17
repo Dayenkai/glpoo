@@ -86,9 +86,8 @@ public class RechercheFilm {
         StringBuilder sql_req = new StringBuilder("SELECT t.titre, ln.nom, fn.prenom, c.pays, d.duree, a.titre from films as M, personnes as P, pays as C");
         StringBuilder filter = new StringBuilder("with filtre");
         int valueLength = 0;
-        String chars = "";
+        String chars = "", type="";
         String[] array;
-        //System.out.println(title_filter);
 
         for (Map.Entry<String, String> entry : user_req.entrySet()) {
             //System.out.println("Key: " + entry.getKey() + ". Value: " + entry.getValue());
@@ -97,29 +96,33 @@ public class RechercheFilm {
             switch(entry.getKey()){
                 case "TITRE":
                     if(!entry.getValue().contains("ou") && !entry.getValue().contains(","))
-                        filter.append(" (SELECT id_film FROM recherche_titre WHERE titre MATCH '" + entry.getKey() + "') ");
+                        filter.append(" (SELECT id_film FROM recherche_titre WHERE titre MATCH '" + entry.getValue() + "') ");
                     else{
-                        if(entry.getValue().contains("ou")){
-                            chars = new StringBuilder().append(entry.getValue().charAt(valueLength-3)).append(entry.getValue().charAt(valueLength-2)).append(entry.getValue().charAt(valueLength-1)).toString();
-                            if(chars != " ou"){
-                                array = get(entry.getValue(), "ou");
+                        type = new StringBuilder().append(entry.getValue().charAt(valueLength-3)).append(entry.getValue().charAt(valueLength-2)).append(entry.getValue().charAt(valueLength-1)).toString();
+                        System.out.println("\n" +chars);
+                        
+                        array = get(entry.getValue(), "ou");
+                        for(int i = 0; i<array.length; i++){
+                            if(i==0)
+                                chars = " (SELECT id_film FROM recherche_titre WHERE titre MATCH '" + array[i] + "' ";
+                            else
+                                chars += "UNION SELECT id_film FROM recherche_titre WHERE titre MATCH '" + array[i] + "'";
+                        }
+                        if(type == " ou")
+                                chars += " UNION "; //au moins un OU en fin de ligne
 
-                                chars = " (SELECT id_film FROM recherche_titre WHERE titre MATCH '" + array[0] + "' ";
-                                for(int i = 1; i<chars.length(); i++){
-                                    chars += "UNION SELECT id_film FROM recherche_titre WHERE titre MATCH '" + array[i] + "'";
-                                }
-                                chars += ") " ;
-                                filter.append(chars);
-                            }else if(chars == "ou"){
-                                filter.append(" UNION "); //au moins un OU en fin de ligne
-                            }
-                            }else if(entry.getValue().contains(",")){
-                                chars = new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString();
-                                if(chars == ","){
-                                    filter.append(" INTERSECT ");
-                                }
-                            }
-                    }
+                        chars += ") " ;
+                        
+
+                        if(entry.getValue().contains(",")){
+                            type = new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString();
+                            if(chars != ",")
+                                chars += " INTERSECT "; 
+                            else
+                                System.err.println("error trying to ask linked titles");
+                        }
+                        filter.append(chars);
+                    }   
                     break;
 
                 case "DE":
@@ -130,7 +133,7 @@ public class RechercheFilm {
 
                 case "PAYS":
                     if(!entry.getValue().contains("ou") && !entry.getValue().contains(",")){
-                            filter.append(" (SELECT id_film FROM films, pays where films.pays= pays.code and films.pays='" + entry.getKey() + "' OR pays.nom = '" + entry.getKey() + "') ");
+                            filter.append(" (SELECT id_film FROM films, pays where films.pays= pays.code and films.pays='" + entry.getValue() + "' OR pays.nom = '" + entry.getKey() + "') ");
                 
                     }else{
                         if(entry.getValue().contains("ou")){
@@ -167,7 +170,7 @@ public class RechercheFilm {
 
                 case "EN":
                     if(!entry.getValue().contains("ou") && !entry.getValue().contains(","))
-                        filter.append(" (SELECT id_film FROM films WHERE annee=" + entry.getKey() + ") ");
+                        filter.append(" (SELECT id_film FROM films WHERE annee=" + entry.getValue() + ") ");
                     else{
                         if(entry.getValue().contains("ou")){
                             chars = new StringBuilder().append(entry.getValue().charAt(valueLength-3)).append(entry.getValue().charAt(valueLength-2)).append(entry.getValue().charAt(valueLength-1)).toString();
@@ -195,7 +198,7 @@ public class RechercheFilm {
 
                 case "AVANT":
                     if(!entry.getValue().contains("ou") && !entry.getValue().contains(","))
-                        filter.append(" (SELECT id_film FROM films WHERE annee<" + entry.getKey() + ") ");
+                        filter.append(" (SELECT id_film FROM films WHERE annee<" + entry.getValue() + ") ");
                     else{
                         if(entry.getValue().contains("ou")){
                             chars = new StringBuilder().append(entry.getValue().charAt(valueLength-3)).append(entry.getValue().charAt(valueLength-2)).append(entry.getValue().charAt(valueLength-1)).toString();
@@ -224,7 +227,7 @@ public class RechercheFilm {
 
                 case "APRES":
                     if(!entry.getValue().contains("ou") && !entry.getValue().contains(","))
-                        filter.append(" (SELECT id_film FROM films WHERE annee>" + entry.getKey() + ") ");
+                        filter.append(" (SELECT id_film FROM films WHERE annee>" + entry.getValue() + ") ");
                     else{
                         if(entry.getValue().contains("ou")){
                             chars = new StringBuilder().append(entry.getValue().charAt(valueLength-3)).append(entry.getValue().charAt(valueLength-2)).append(entry.getValue().charAt(valueLength-1)).toString();
