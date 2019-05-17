@@ -1,4 +1,3 @@
-import java.lang.reflect.Array;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -13,7 +12,7 @@ import java.util.Map;
 //java -cp ".:sqlite-jdbc-3.27.2.1.jar" Main
 public class RechercheFilm {
     private Connection _connection;
-    private String[] _keywords = {"titre", "de", "avec", "pays", "en", "avant", "apres"};
+    private String[] _keywords = {"TITRE", "DE", "AVEC", "PAYS", "EN", "AVANT", "APRES"};
 
     public RechercheFilm(String nomFichierSQLite){
         _connection = null;
@@ -44,7 +43,7 @@ public class RechercheFilm {
         for(int i=0; i<requete.length(); i++){
 
             if(requete.charAt(i)== ' '){
-                word.toLowerCase();
+                word = word.toUpperCase();
 
                 if(Arrays.asList(_keywords).contains(word)){
                     if(!data.containsKey(word))
@@ -52,6 +51,7 @@ public class RechercheFilm {
                     actualKey = word;
 
                 }else if(actualKey == ""){
+                    word = word.toLowerCase();
                     data.replace(tKey, data.get(tKey), data.get(tKey) + " " + word);
                     tKey="";
 
@@ -61,7 +61,7 @@ public class RechercheFilm {
                   
 
                 }else{
-                    //si la clé existe déjà, on rajoute la valeur à la clé déjà existante
+                    word = word.toLowerCase();
                     if(data.get(actualKey) != null)
                         data.replace(actualKey, data.get(actualKey), data.get(actualKey) + " " + word);
                     else
@@ -70,38 +70,41 @@ public class RechercheFilm {
                 }
                 word = "";
 
-            }else {
+            }else 
                 word += requete.charAt(i);
-            }
+            
             
         }
 
-        //print map
-        for (Map.Entry<String, String> entry : data.entrySet()) {
-            System.out.println("Key: " + entry.getKey() + ". Value: " + entry.getValue());
-        }
 
-        return "";
+        return analyzeRequest(data);
     }
 
 
-    @SuppressWarnings("unchecked")
-    public static <T>T[] splice(final T[] array, int start, final int deleteCount) {
-        if (start < 0)
-            start += array.length;
 
-        final T[] spliced = (T[]) Array.newInstance(array.getClass().getComponentType(), array.length - deleteCount);
-        if (start != 0)
-            System.arraycopy(array, 0, spliced, 0, start);
-
-        if (start + deleteCount != array.length)
-            System.arraycopy(array, start + deleteCount, spliced, start, array.length - start - deleteCount);
-
-        return spliced;
-    }
 
     public String analyzeRequest(LinkedHashMap<String, String> user_req){
-
+        StringBuilder sql_req = new StringBuilder();
+        for (Map.Entry<String, String> entry : user_req.entrySet()) {
+            System.out.println("Key: " + entry.getKey() + ". Value: " + entry.getValue());
+            switch(entry.getKey()){
+                case "TITRE":
+                    break;
+                case "DE":
+                    break;
+                case "AVEC":
+                    break;
+                case "PAYS":
+                    break;
+                case "EN":
+                    break;
+                case "AVANT":
+                    break;
+                case "APRES":
+                    break;
+            }
+        }
+        
         return "";
     }
 }
