@@ -52,20 +52,20 @@ public class RechercheFilm {
 
                 }else if(actualKey == ""){
                     word = word.toLowerCase();
-                    data.replace(tKey, data.get(tKey), data.get(tKey) + " " + word);
+                    data.replace(tKey, data.get(tKey), data.get(tKey) + " " + word.replaceAll("\\s+", ""));
                     tKey="";
 
                 }else if(word == "ou"){
-                   data.replace(tKey, data.get(tKey), data.get(tKey) + " " + word);
+                   data.replace(tKey, data.get(tKey), data.get(tKey) + " " + word.replaceAll("\\s+", ""));
                    actualKey = "";
                   
 
                 }else{
                     word = word.toLowerCase();
                     if(data.get(actualKey) != null)
-                        data.replace(actualKey, data.get(actualKey), data.get(actualKey) + " " + word);
+                        data.replace(actualKey, data.get(actualKey), data.get(actualKey) + " " + word.replaceAll("\\s+", ""));
                     else
-                        data.replace(actualKey, null, word);
+                        data.replace(actualKey, null, word.replaceAll("\\s+", ""));
                     tKey=actualKey;
                 }
                 word = "";
@@ -75,7 +75,9 @@ public class RechercheFilm {
             
             
         }
-
+        for (Map.Entry<String, String> entry : data.entrySet()) {
+            System.out.println("Key: " + entry.getKey() + ". Value: " + entry.getValue());
+        }
         return analyzeRequest(data);
     }
 
@@ -84,13 +86,12 @@ public class RechercheFilm {
 
     public String analyzeRequest(LinkedHashMap<String, String> user_req){
         StringBuilder sql_req = new StringBuilder("SELECT t.titre, ln.nom, fn.prenom, c.pays, d.duree, a.titre from films as M, personnes as P, pays as C");
-        StringBuilder filter = new StringBuilder("with filtre");
+        StringBuilder filter = new StringBuilder("with filtre as");
         int valueLength = 0;
         String chars = "", type="";
         String[] array;
 
         for (Map.Entry<String, String> entry : user_req.entrySet()) {
-            //System.out.println("Key: " + entry.getKey() + ". Value: " + entry.getValue());
             valueLength = entry.getValue().length();
             
             switch(entry.getKey()){
@@ -98,25 +99,24 @@ public class RechercheFilm {
                     if(!entry.getValue().contains("ou") && !entry.getValue().contains(","))
                         filter.append(" (SELECT id_film FROM recherche_titre WHERE titre MATCH '" + entry.getValue() + "') ");
                     else{
-                        type = new StringBuilder().append(entry.getValue().charAt(valueLength-3)).append(entry.getValue().charAt(valueLength-2)).append(entry.getValue().charAt(valueLength-1)).toString();
-                        System.out.println("\n" +chars);
-                        
-                        array = get(entry.getValue(), "ou");
-                        for(int i = 0; i<array.length; i++){
-                            if(i==0)
-                                chars = " (SELECT id_film FROM recherche_titre WHERE titre MATCH '" + array[i] + "' ";
-                            else
-                                chars += "UNION SELECT id_film FROM recherche_titre WHERE titre MATCH '" + array[i] + "'";
-                        }
-                        if(type == " ou")
-                                chars += " UNION "; //au moins un OU en fin de ligne
+                        if(entry.getValue().contains("ou")){
+                            type = new StringBuilder().append(entry.getValue().charAt(valueLength-3)).append(entry.getValue().charAt(valueLength-2)).append(entry.getValue().charAt(valueLength-1)).toString();
+                            
+                            array = get(entry.getValue(), "ou");
+                            for(int i = 0; i<array.length; i++){
+                                if(i==0)
+                                    chars = " (SELECT id_film FROM recherche_titre WHERE titre MATCH '" + array[i] + "' ";
+                                else
+                                    chars += "UNION SELECT id_film FROM recherche_titre WHERE titre MATCH '" + array[i] + "'";
+                            }
+                            if(type == " ou")
+                                    chars += " UNION "; //au moins un OU en fin de ligne
 
-                        chars += ") " ;
-                        
+                            chars += ") " ;
 
-                        if(entry.getValue().contains(",")){
+                        }else if(entry.getValue().contains(",")){
                             type = new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString();
-                            if(chars != ",")
+                            if(chars == ",")
                                 chars += " INTERSECT "; 
                             else
                                 System.err.println("error trying to ask linked titles");
