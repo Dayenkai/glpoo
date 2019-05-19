@@ -147,7 +147,7 @@ public class RechercheFilm {
 
                             type = new StringBuilder().append(entry.getValue().charAt(valueLength-3)).append(entry.getValue().charAt(valueLength-2)).append(entry.getValue().charAt(valueLength-1)).toString();
                             if(type.equals(" ou"))
-                                    chars += " UNION "; //au moins un OU en fin de ligne
+                                    chars += " UNION "; 
 
                         }if(entry.getValue().contains(",")){
                             type = new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString();
@@ -177,7 +177,7 @@ public class RechercheFilm {
 
                             type = new StringBuilder().append(entry.getValue().charAt(valueLength-3)).append(entry.getValue().charAt(valueLength-2)).append(entry.getValue().charAt(valueLength-1)).toString();
                             if(type.equals(" ou"))
-                                    chars += " UNION "; //au moins un OU en fin de ligne
+                                    chars += " UNION "; 
 
                         }if(entry.getValue().contains(",")){
 
@@ -207,7 +207,7 @@ public class RechercheFilm {
 
                             type = new StringBuilder().append(entry.getValue().charAt(valueLength-3)).append(entry.getValue().charAt(valueLength-2)).append(entry.getValue().charAt(valueLength-1)).toString();
                             if(type.equals(" ou"))
-                                    chars += " UNION "; //au moins un OU en fin de ligne
+                                    chars += " UNION "; 
 
                         }if(entry.getValue().contains(",")){
                             type = new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString();
@@ -239,7 +239,7 @@ public class RechercheFilm {
 
                             type = new StringBuilder().append(entry.getValue().charAt(valueLength-3)).append(entry.getValue().charAt(valueLength-2)).append(entry.getValue().charAt(valueLength-1)).toString();
                             if(type.equals(" ou"))
-                                    chars += " UNION "; //au moins un OU en fin de ligne
+                                    chars += " UNION "; 
 
                         }if(entry.getValue().contains(",")){
                             type = new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString();
