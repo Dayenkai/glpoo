@@ -1,6 +1,7 @@
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -41,7 +42,6 @@ public class RechercheFilm {
         requete +=" ";
        
         for(int i=0; i<requete.length(); i++){
-
             if(requete.charAt(i)== ' '){
                 word = word.toUpperCase();
 
@@ -69,15 +69,13 @@ public class RechercheFilm {
                     tKey=actualKey;
                 }
                 word = "";
-
             }else 
                 word += requete.charAt(i);
-            
-            
         }
+        /*
         for (Map.Entry<String, String> entry : data.entrySet()) {
             System.out.println("Key: " + entry.getKey() + ". Value: " + entry.getValue());
-        }
+        }*/
         return analyzeRequest(data);
     }
 
@@ -90,7 +88,8 @@ public class RechercheFilm {
         int valueLength = 0;
         String chars = "", type="";
         String[] array;
-
+        ArrayList<String> errors = new ArrayList<String>();
+        
         for (Map.Entry<String, String> entry : user_req.entrySet()) {
             valueLength = entry.getValue().length();
             
@@ -100,27 +99,28 @@ public class RechercheFilm {
                         filter.append(" (SELECT id_film FROM recherche_titre WHERE titre MATCH '" + entry.getValue() + "') ");
                     else{
                         if(entry.getValue().contains("ou")){
-                            type = new StringBuilder().append(entry.getValue().charAt(valueLength-3)).append(entry.getValue().charAt(valueLength-2)).append(entry.getValue().charAt(valueLength-1)).toString();
+                            type = new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString();
+
+                            array = (type.equals(",")) ? get((new StringBuilder(entry.getValue()).deleteCharAt(valueLength-1).toString()).toString(), "ou") : get(entry.getValue(), "ou");
                             
-                            array = get(entry.getValue(), "ou");
                             for(int i = 0; i<array.length; i++){
-                                if(i==0)
-                                    chars = " (SELECT id_film FROM recherche_titre WHERE titre MATCH '" + array[i] + "' ";
-                                else
-                                    chars += "UNION SELECT id_film FROM recherche_titre WHERE titre MATCH '" + array[i] + "'";
+                                chars = (i==0) ? " (SELECT id_film FROM recherche_titre WHERE titre MATCH '" + array[i] + "' " : "UNION SELECT id_film FROM recherche_titre WHERE titre MATCH '" + array[i] + "'";
                             }
-                            if(type == " ou")
+
+                            type = new StringBuilder().append(entry.getValue().charAt(valueLength-3)).append(entry.getValue().charAt(valueLength-2)).append(entry.getValue().charAt(valueLength-1)).toString();
+                            if(type.equals(" ou"))
                                     chars += " UNION "; //au moins un OU en fin de ligne
 
-                            chars += ") " ;
-
-                        }else if(entry.getValue().contains(",")){
+                        }if(entry.getValue().contains(",")){
                             type = new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString();
-                            if(chars == ",")
+                        
+                            if(type.equals(",") && (entry.getValue().length() - entry.getValue().replace(",", "").length()) == 1)
                                 chars += " INTERSECT "; 
                             else
-                                System.err.println("error trying to ask linked titles");
+                                errors.add("Et inclusif sur deux titres");
+                                
                         }
+                        chars += ") " ;
                         filter.append(chars);
                     }   
                     break;
@@ -132,40 +132,34 @@ public class RechercheFilm {
                     break;
 
                 case "PAYS":
-                    if(!entry.getValue().contains("ou") && !entry.getValue().contains(",")){
-                            filter.append(" (SELECT id_film FROM films, pays where films.pays= pays.code and films.pays='" + entry.getValue() + "' OR pays.nom = '" + entry.getKey() + "') ");
-                
-                    }else{
+                    if(!entry.getValue().contains("ou") && !entry.getValue().contains(","))
+                        filter.append(" (SELECT id_film FROM films, pays where films.pays= pays.code and films.pays='" + entry.getValue() + "' OR pays.nom = '" + entry.getValue() + "') ");
+                    else{
                         if(entry.getValue().contains("ou")){
-                            chars = new StringBuilder().append(entry.getValue().charAt(valueLength-3)).append(entry.getValue().charAt(valueLength-2)).append(entry.getValue().charAt(valueLength-1)).toString();
+                            type = new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString();
 
-                            if(chars != " ou" && entry.getValue().length()>2){
-                                array = get(entry.getValue(), "ou");
-                                chars = " (SELECT id_film FROM films NATURAL JOIN pays WHERE nom='" + array[0] + "' ";
-                                for(int i = 1; i<chars.length(); i++){
-                                    chars += "UNION SELECT id_film FROM films NATURAL JOIN pays WHERE nom='" + array[i] + "'";
-                                }
-                                chars += ") " ;
-                                filter.append(chars);
-                            }else if(chars != " ou" && entry.getValue().length()<3){
-                                array = get(entry.getValue(), "ou");
-                                chars = " (SELECT id_film FROM films WHERE pays='" + array[0] + "' ";
-                                for(int i = 1; i<chars.length(); i++){
-                                    chars += "UNION SELECT id_film FROM films NATURAL JOIN pays WHERE nom='" + array[i] + "'";
-                                }
-                                chars += ") " ;
-                                filter.append(chars);
+                            array = (type.equals(",")) ? get((new StringBuilder(entry.getValue()).deleteCharAt(valueLength-1).toString()).toString(), "ou") : get(entry.getValue(), "ou");
+                            
+                            for(int i = 0; i<array.length; i++){
+                                chars = (i==0) ? " (SELECT id_film FROM films, pays where films.pays= pays.code and films.pays='" + array[i] +  "' OR pays.nom = '" + array[i] + "' "  : "UNION SELECT id_film FROM films, pays where films.pays= pays.code and films.pays='" + array[i] + "' OR pays.nom = '" + array[i] + "'";
+                            }
 
-                            }else if(chars == "ou")
-                                filter.append(" UNION "); //au moins un OU en fin de ligne
-                            
-                        }else if(entry.getValue().contains(",")){
-                            chars = new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString();
-                            if(chars == ",")
-                                filter.append(" INTERSECT ");
-                            
+                            type = new StringBuilder().append(entry.getValue().charAt(valueLength-3)).append(entry.getValue().charAt(valueLength-2)).append(entry.getValue().charAt(valueLength-1)).toString();
+                            if(type.equals(" ou"))
+                                    chars += " UNION "; //au moins un OU en fin de ligne
+
+                        }if(entry.getValue().contains(",")){
+                            type = new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString();
+                        
+                            if(type.equals(",") && (entry.getValue().length() - entry.getValue().replace(",", "").length()) == 1)
+                                chars += " INTERSECT "; 
+                            else
+                                errors.add("Et inclusif sur deux pays");
+                                
                         }
-                    }
+                        chars += " )" ;
+                        filter.append(chars);
+                    }  
                     break;
 
                 case "EN":
@@ -173,27 +167,30 @@ public class RechercheFilm {
                         filter.append(" (SELECT id_film FROM films WHERE annee=" + entry.getValue() + ") ");
                     else{
                         if(entry.getValue().contains("ou")){
-                            chars = new StringBuilder().append(entry.getValue().charAt(valueLength-3)).append(entry.getValue().charAt(valueLength-2)).append(entry.getValue().charAt(valueLength-1)).toString();
-                            if(chars != " ou"){
-                                array = get(entry.getValue(), "ou");
-                                chars = " (SELECT id_film FROM films WHERE annee=" + array[0];
-                                for(int i = 1; i<chars.length(); i++){
-                                    chars += "UNION SELECT id_film FROM films WHERE annee=" + array[i];
-                                }
-                                chars += ") " ;
+                            type = new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString();
 
-                                filter.append(chars);
-                            }else 
-                                filter.append(" UNION "); //au moins un OU en fin de ligne
+                            array = (type.equals(",")) ? get((new StringBuilder(entry.getValue()).deleteCharAt(valueLength-1).toString()).toString(), "ou") : get(entry.getValue(), "ou");
+                            
+                            for(int i = 0; i<array.length; i++){
+                                chars = (i==0) ? " (SELECT id_film FROM films WHERE annee=" + array[i] + "' "  : "UNION SELECT id_film FROM films WHERE annee=" + array[i] + "'";
+                            }
+
+                            type = new StringBuilder().append(entry.getValue().charAt(valueLength-3)).append(entry.getValue().charAt(valueLength-2)).append(entry.getValue().charAt(valueLength-1)).toString();
+                            if(type.equals(" ou"))
+                                    chars += " UNION "; //au moins un OU en fin de ligne
+
+                        }if(entry.getValue().contains(",")){
+                            type = new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString();
                         
-                        }else if(entry.getValue().contains(",")){
-                            chars = new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString();
-                            if(chars != ","){
-                                //message d'erreur
-                            }else 
-                                filter.append(" INTERSECT ");
+                            if(type.equals(",") && (entry.getValue().length() - entry.getValue().replace(",", "").length()) == 1)
+                                chars += " INTERSECT "; 
+                            else
+                                errors.add("Et inclusif sur deux dates");
+                                
                         }
-                    }
+                    chars += " )" ;
+                    filter.append(chars);
+                    }  
                     break;
 
                 case "AVANT":
@@ -201,57 +198,61 @@ public class RechercheFilm {
                         filter.append(" (SELECT id_film FROM films WHERE annee<" + entry.getValue() + ") ");
                     else{
                         if(entry.getValue().contains("ou")){
-                            chars = new StringBuilder().append(entry.getValue().charAt(valueLength-3)).append(entry.getValue().charAt(valueLength-2)).append(entry.getValue().charAt(valueLength-1)).toString();
-                            if(chars != " ou"){
-                                array = get(entry.getValue(), "ou");
-                                chars = " (SELECT id_film FROM films WHERE annee<" + array[0];
-                                for(int i = 1; i<chars.length(); i++){
-                                    chars += "UNION SELECT id_film FROM films WHERE annee<" + array[i];
-                                }
-                                chars += ") " ;
+                            type = new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString();
 
-                            filter.append(chars);
+                            array = (type.equals(",")) ? get((new StringBuilder(entry.getValue()).deleteCharAt(valueLength-1).toString()).toString(), "ou") : get(entry.getValue(), "ou");
+                            
+                            for(int i = 0; i<array.length; i++){
+                                chars = (i==0) ? " (SELECT id_film FROM films WHERE annee<" + array[i] + "' "  : "UNION SELECT id_film FROM films WHERE annee<" + array[i] + "'";
+                            }
 
-                            }else 
-                                filter.append(" UNION "); //au moins un OU en fin de ligne
+                            type = new StringBuilder().append(entry.getValue().charAt(valueLength-3)).append(entry.getValue().charAt(valueLength-2)).append(entry.getValue().charAt(valueLength-1)).toString();
+                            if(type.equals(" ou"))
+                                    chars += " UNION "; //au moins un OU en fin de ligne
 
-                        }else if(entry.getValue().contains(",")){
-                            chars = new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString();
-                            if(chars != ","){
-                                //message d'erreur
-                            }else 
-                                filter.append(" INTERSECT ");
+                        }if(entry.getValue().contains(",")){
+                            type = new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString();
+                        
+                            if(type.equals(",") && (entry.getValue().length() - entry.getValue().replace(",", "").length()) == 1)
+                                chars += " INTERSECT "; 
+                            else
+                                errors.add("Et inclusif sur deux dates");
+                                
                         }
-                    }
+                        chars += " )" ;
+                        filter.append(chars);
+                    }  
                     break;
 
                 case "APRES":
                     if(!entry.getValue().contains("ou") && !entry.getValue().contains(","))
                         filter.append(" (SELECT id_film FROM films WHERE annee>" + entry.getValue() + ") ");
-                    else{
-                        if(entry.getValue().contains("ou")){
-                            chars = new StringBuilder().append(entry.getValue().charAt(valueLength-3)).append(entry.getValue().charAt(valueLength-2)).append(entry.getValue().charAt(valueLength-1)).toString();
-                            if(chars != " ou"){
-                                array = get(entry.getValue(), "ou");
-                                chars = " (SELECT id_film FROM films WHERE annee>" + array[0];
-                                for(int i = 1; i<chars.length(); i++){
-                                    chars += "UNION SELECT id_film FROM films WHERE annee>" + array[i];
-                                }
-                                chars += ") " ;
+                else{
+                    if(entry.getValue().contains("ou")){
+                        type = new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString();
 
-                            filter.append(chars);
-
-                            }else 
-                                filter.append(" UNION "); //au moins un OU en fin de ligne
-                                
-                        }else if(entry.getValue().contains(",")){
-                            chars = new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString();
-                            if(chars != ","){
-                                //message d'erreur
-                            }else 
-                                filter.append(" INTERSECT ");
+                        array = (type.equals(",")) ? get((new StringBuilder(entry.getValue()).deleteCharAt(valueLength-1).toString()).toString(), "ou") : get(entry.getValue(), "ou");
+                        
+                        for(int i = 0; i<array.length; i++){
+                            chars = (i==0) ? " (SELECT id_film FROM films WHERE annee>" + array[i] + "' "  : "UNION SELECT id_film FROM films WHERE annee<" + array[i] + "'";
                         }
+
+                        type = new StringBuilder().append(entry.getValue().charAt(valueLength-3)).append(entry.getValue().charAt(valueLength-2)).append(entry.getValue().charAt(valueLength-1)).toString();
+                        if(type.equals(" ou"))
+                                chars += " UNION "; //au moins un OU en fin de ligne
+
+                    }if(entry.getValue().contains(",")){
+                        type = new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString();
+                    
+                        if(type.equals(",") && (entry.getValue().length() - entry.getValue().replace(",", "").length()) == 1)
+                            chars += " INTERSECT "; 
+                        else
+                            errors.add("Et inclusif sur deux dates");
+                            
                     }
+                    chars += " )" ;
+                    filter.append(chars);
+                }
                     break;
             }
 
