@@ -72,10 +72,6 @@ public class RechercheFilm {
             }else 
                 word += requete.charAt(i);
         }
-        /*
-        for (Map.Entry<String, String> entry : data.entrySet()) {
-            System.out.println("Key: " + entry.getKey() + ". Value: " + entry.getValue());
-        }*/
         return analyzeRequest(data);
     }
 
@@ -83,7 +79,7 @@ public class RechercheFilm {
 
 
     public String analyzeRequest(LinkedHashMap<String, String> user_req){
-        StringBuilder sql_req = new StringBuilder("SELECT t.titre, ln.nom, fn.prenom, c.pays, d.duree, a.titre from films as M, personnes as P, pays as C");
+        //StringBuilder sql_req = new StringBuilder("SELECT t.titre, ln.nom, fn.prenom, c.pays, d.duree, a.titre from films as M, personnes as P, pays as C");
         StringBuilder filter = new StringBuilder("with filtre as");
         int valueLength = 0;
         String chars = "(", type="";
@@ -101,8 +97,6 @@ public class RechercheFilm {
                     else{ 
                         if(entry.getValue().contains("ou")){
                             type = new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString();
-                            System.out.println("on est dans le cas d'un ou \n\n\n");
-                            System.out.println("\n\n\n " + chars); 
                             array = (type.equals(",")) ? get((new StringBuilder(entry.getValue()).deleteCharAt(valueLength-1).toString()).toString(), "ou") : get(entry.getValue(), "ou");
                             
                             for(int i = 0; i<array.length; i++){
@@ -113,8 +107,6 @@ public class RechercheFilm {
                             if(type.equals(" ou"))
                                 chars += " UNION "; 
                         } if(entry.getValue().contains(",")){
-                            System.out.println("on est dans le cas d'un et \n\n\n");
-                            System.out.println("\n\n\n " + chars); 
                             type = new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString();
                         
                             if(type.equals(",") && (entry.getValue().length() - entry.getValue().replace(",", "").length()) == 1)
@@ -126,6 +118,8 @@ public class RechercheFilm {
                     }break;
 
                 case "DE":
+                    System.out.println(entry.getValue());
+                    checkNameLength(entry.getValue());
                     break;
 
                 case "AVEC":
@@ -172,7 +166,7 @@ public class RechercheFilm {
                             array = (type.equals(",")) ? get((new StringBuilder(entry.getValue()).deleteCharAt(valueLength-1).toString()).toString(), "ou") : get(entry.getValue(), "ou");
                             
                             for(int i = 0; i<array.length; i++){
-                                chars += (i==0) ? " SELECT id_film FROM films WHERE annee=" + array[i] + "' "  : "UNION SELECT id_film FROM films WHERE annee=" + array[i] + "'";
+                                chars += (i==0) ? " SELECT id_film FROM films WHERE annee=" + array[i] + " "  : "UNION SELECT id_film FROM films WHERE annee=" + array[i] + "";
                             }
 
                             type = new StringBuilder().append(entry.getValue().charAt(valueLength-3)).append(entry.getValue().charAt(valueLength-2)).append(entry.getValue().charAt(valueLength-1)).toString();
@@ -202,7 +196,7 @@ public class RechercheFilm {
                             array = (type.equals(",")) ? get((new StringBuilder(entry.getValue()).deleteCharAt(valueLength-1).toString()).toString(), "ou") : get(entry.getValue(), "ou");
                             
                             for(int i = 0; i<array.length; i++){
-                                chars += (i==0) ? " SELECT id_film FROM films WHERE annee<" + array[i] + "' "  : "UNION SELECT id_film FROM films WHERE annee<" + array[i] + "'";
+                                chars += (i==0) ? " SELECT id_film FROM films WHERE annee<" + array[i] + " "  : "UNION SELECT id_film FROM films WHERE annee<" + array[i] + "";
                             }
 
                             type = new StringBuilder().append(entry.getValue().charAt(valueLength-3)).append(entry.getValue().charAt(valueLength-2)).append(entry.getValue().charAt(valueLength-1)).toString();
@@ -210,20 +204,21 @@ public class RechercheFilm {
                                     chars += " UNION "; 
 
                         }if(entry.getValue().contains(",")){
-                            type = new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString();
+
                             if(!type.equals(",") && (entry.getValue().length() - entry.getValue().replace(",", "").length()) >= 1){
-                                array = get(entry.getValue(), ",");
-    
+                                type = new StringBuilder().append(entry.getValue().charAt(valueLength-3)).append(entry.getValue().charAt(valueLength-2)).append(entry.getValue().charAt(valueLength-1)).toString();
+                                array = (type.equals(" ou")) ? get((new StringBuilder(entry.getValue()).delete(valueLength-3, valueLength).toString()).toString(), ",") : get(entry.getValue(), ",");
+
                                 for(int i = 0; i<array.length; i++){
-                                    chars += (i==0) ? " SELECT id_film FROM films WHERE annee<" + array[i] + "' "  : "INTERSECT SELECT id_film FROM films WHERE annee<" + array[i] + "'";
+                                    chars += (i==0) ? " SELECT id_film FROM films WHERE annee<" + array[i] + " "  : " INTERSECT SELECT id_film FROM films WHERE annee<" + array[i] + "";
                                 }
-                                chars += (type.equals(",")) ? " INTERSECT " : "";
+
+                                chars += (new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString().equals(",")) ? " INTERSECT " : " UNION ";
                             }
                         }
                     }break;
 
                 case "APRES": 
-                // une seule virgule en fin de chaine de caractères vérifier ce qui se passe si on a un ou en fin de ligne
                     if((new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString()).equals(",") && (entry.getValue().length() - entry.getValue().replace(",", "").length()) == 1)
                         chars += " SELECT id_film FROM films WHERE annee>" + new StringBuilder(entry.getValue()).deleteCharAt(valueLength-1).toString() + " ";
                     if(!entry.getValue().contains("ou") && !entry.getValue().contains(","))
@@ -234,7 +229,7 @@ public class RechercheFilm {
                             array = (type.equals(",")) ? get((new StringBuilder(entry.getValue()).deleteCharAt(valueLength-1).toString()).toString(), "ou") : get(entry.getValue(), "ou");
                             
                             for(int i = 0; i<array.length; i++){
-                                chars += (i==0) ? " SELECT id_film FROM films WHERE annee>" + array[i] + "' "  : "UNION SELECT id_film FROM films WHERE annee<" + array[i] + "'";
+                                chars += (i==0) ? " SELECT id_film FROM films WHERE annee>" + array[i] + " "  : "UNION SELECT id_film FROM films WHERE annee>" + array[i] + "";
                             }
 
                             type = new StringBuilder().append(entry.getValue().charAt(valueLength-3)).append(entry.getValue().charAt(valueLength-2)).append(entry.getValue().charAt(valueLength-1)).toString();
@@ -242,15 +237,16 @@ public class RechercheFilm {
                                     chars += " UNION "; 
 
                         }if(entry.getValue().contains(",")){
-                            type = new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString();
-                        
+
                             if( (entry.getValue().length() - entry.getValue().replace(",", "").length()) >= 1){
-                                array = get(entry.getValue(), ",");
-        
+                                type = new StringBuilder().append(entry.getValue().charAt(valueLength-3)).append(entry.getValue().charAt(valueLength-2)).append(entry.getValue().charAt(valueLength-1)).toString();
+                                array = (type.equals(" ou")) ? get((new StringBuilder(entry.getValue()).delete(valueLength-3, valueLength).toString()).toString(), ",") : get(entry.getValue(), ",");
+
                                 for(int i = 0; i<array.length; i++){
-                                    chars += (i==0) ? " SELECT id_film FROM films WHERE annee<" + array[i] + "' "  : "INTERSECT SELECT id_film FROM films WHERE annee<" + array[i] + "'";
+                                    chars += (i==0) ? " SELECT id_film FROM films WHERE annee>" + array[i] + " "  : "INTERSECT SELECT id_film FROM films WHERE annee>" + array[i] + " ";
                                 }
-                                chars += (type.equals(",")) ? " INTERSECT " : "";
+                                //Union par défaut
+                                chars += (new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString().equals(",")) ? " INTERSECT " : " UNION ";
                             }
                            
                         }
@@ -260,7 +256,7 @@ public class RechercheFilm {
         }
         chars += ") " ;
         filter.append(chars);
-        System.out.println(filter.toString());
+        System.out.println("\n\n\n" + filter.toString());
         
         return "";
     }
@@ -271,6 +267,15 @@ public class RechercheFilm {
         else
             return line.split(",");
     }
-
+    // "John Doe ou"
+    public int checkNameLength(String line){
+        //si il y a un ou qui n'est pas en fin de ligne, on split sur le ou
+        String[] fullName = line.split(" ");
+        for(String n : fullName){
+            System.out.println(n);
+        }
+        
+        return 0;
+    }
   
 }
