@@ -1,3 +1,4 @@
+import java.util.*;
 
 
 public class Main {
@@ -5,9 +6,9 @@ public class Main {
     public static void main(String[] args) {
         RechercheFilm uneRecherche = new RechercheFilm("bdfilm");
         //Quand on a pas d'informations sur la transition entre le keyword suivant, on met un ou ?
-        uneRecherche.retrouve("de peter han");
-
-        uneRecherche.fermeBase();
+        uneRecherche.retrouve(" de norton,");
+        
+        
 
         long debut = System.currentTimeMillis();
 

@@ -111,3 +111,31 @@ if(!entry.getValue().contains("ou") && !entry.getValue().contains(","))
                                 filter.append(" INTERSECT ");
                         }
                     }
+
+public void generateAvec(String buffer) {
+		String part[] = buffer.split(" ");
+		if(part.length ==1) {
+			filtre += " select f.id_film from films f join generique g on g.id_film = f.id_film join personnes p on g.id_personne = p.id_personne where ( p.nom_sans_accent = LIKE '%"+buffer.trim()+"%' AND role = 'A') OR ( p.prenom_sans_accent = LIKE '%"+buffer.trim()+"%' AND role = 'A') ";
+		}
+		if(part.length == 2) {
+			filtre += " select f.id_film from films f join generique g on g.id_film = f.id_film join personnes p on g.id_personne = p.id_personne where ( p.nom_sans_accent LIKE '%"+part[0].trim()+"%' AND role = 'A' AND p.prenom_sans_accent LIKE '%" + part[1].trim()+"%') OR ( p.prenom_sans_accent LIKE '%"+part[0].trim()+"%' AND role = 'A' AND p.nom_sans_accent LIKE '%"+part[1].trim()+"%') ";
+		}
+		if(part.length > 2) {
+			//TODO
+		}
+	}
+
+//si un seul élément, c'est forcément le noms
+                    if((new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString()).equals(",") && (entry.getValue().length() - entry.getValue().replace(",", "").length()) == 1 && !entry.getValue().contains(" "))
+                        chars += " SELECT id_film from generique as G inner join personnes as P on G.id_personne = P.id_personne WHERE P.nom LIKE '"+ new StringBuilder(entry.getValue()).deleteCharAt(valueLength-1).toString() + "%' " ;
+                    if(!entry.getValue().contains("ou") && !entry.getValue().contains(",") && !entry.getValue().contains(" "))
+                        chars += " SELECT id_film from generique as G inner join personnes as P on G.id_personne = P.id_personne WHERE P.nom LIKE '"+ new StringBuilder(entry.getValue()).deleteCharAt(valueLength-1).toString() + "%' " ;
+                    else {
+                        if(entry.getValue().contains("ou")){
+                            type = new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString();
+                            array = (type.equals(",")) ? get((new StringBuilder(entry.getValue()).deleteCharAt(valueLength-1).toString()).toString(), "ou") : get(entry.getValue(), "ou");
+                        }
+                    }
+                    //SELECT id_film from generique as G inner join personnes as P on G.id_personne = P.id_personne where (P.prenom='Richard' OR P.prenom='Richard') AND (P.nom='Norton' OR P.nom='Norton') and G.role='A';
+                    System.out.println(entry.getValue());
+                

@@ -1,10 +1,8 @@
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.*;
+
 
 /***
  * 
@@ -112,14 +110,21 @@ public class RechercheFilm {
                             if(type.equals(",") && (entry.getValue().length() - entry.getValue().replace(",", "").length()) == 1)
                                 chars += " INTERSECT "; 
                             else
-                                errors.add("Et inclusif sur deux titres");
-                                
+                                errors.add("Et inclusif sur deux titres");    
                         }
                     }break;
 
                 case "DE":
-                    System.out.println(entry.getValue());
-                    checkNameLength(entry.getValue());
+                    if((new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString()).equals(",") && (entry.getValue().length() - entry.getValue().replace(",", "").length()) == 1 && !entry.getValue().contains(" "))
+                    chars += " SELECT id_film from generique as G inner join personnes as P on G.id_personne = P.id_personne WHERE P.nom LIKE '"+ new StringBuilder(entry.getValue()).deleteCharAt(valueLength-1).toString() + "%' " ;
+                    if(!entry.getValue().contains("ou") && !entry.getValue().contains(",") && !entry.getValue().contains(" "))
+                        chars += " SELECT id_film from generique as G inner join personnes as P on G.id_personne = P.id_personne WHERE P.nom LIKE '" + new StringBuilder(entry.getValue()).toString() + "%' " ;
+                    else {
+                        if(entry.getValue().contains("ou")){
+                            type = new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString();
+                            
+                        }
+                    }
                     break;
 
                 case "AVEC":
@@ -262,20 +267,25 @@ public class RechercheFilm {
     }
 
     public String[] get(String line, String type){
-        if(type == "ou")
-            return line.split("ou");
-        else
-            return line.split(",");
+        String[] val = (type == "ou") ? line.split("ou") : line.split(",");   
+        return val;
     }
     // "John Doe ou"
-    public int checkNameLength(String line){
-        //si il y a un ou qui n'est pas en fin de ligne, on split sur le ou
-        String[] fullName = line.split(" ");
-        for(String n : fullName){
-            System.out.println(n);
+    public String constructNameReq(String line){
+        String[] arr = line.split("ou");
+        
+        ArrayList<List<String>> names= new ArrayList<List<String>>();
+        
+        for(String n : arr){
+            names.add(Arrays.asList(n.split(" ")));
+        }
+
+        if(!line.contains("ou") && !line.contains(",")){
+            
         }
         
-        return 0;
+        
+        return "";
     }
   
 }
