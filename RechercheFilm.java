@@ -79,7 +79,9 @@ public class RechercheFilm {
     public String analyzeRequest(LinkedHashMap<String, String> user_req){
         //StringBuilder sql_req = new StringBuilder("SELECT t.titre, ln.nom, fn.prenom, c.pays, d.duree, a.titre from films as M, personnes as P, pays as C");
         StringBuilder filter = new StringBuilder("with filtre as");
-        int valueLength = 0;
+        ArrayList<String> names = new ArrayList<String>();
+        String first = "", last= "", and="", or="";
+        int valueLength = 0, number = 0;
         String chars = "(", type="";
         String[] array;
         ArrayList<String> errors = new ArrayList<String>();
@@ -112,34 +114,34 @@ public class RechercheFilm {
                                 errors.add("Et inclusif sur deux titres");    
                         }
                     }
-                    if(new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString().equals(","))
+                    /*if(new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString().equals(","))
                         chars+= " INTERSECT ";
                     else if(new StringBuilder().append(entry.getValue().charAt(valueLength-3)).append(entry.getValue().charAt(valueLength-2)).append(entry.getValue().charAt(valueLength-1)).toString().equals(" ou"))
                         chars += " UNION ";
                     else //on met une intersection par défaut 
                         chars += " INTERSECT ";
-                    break;
+                    break;*/
 
                 case "DE":
-                        ArrayList<String> names = constructNameReq(entry.getValue());
-                        String first = "", last= "", and="", or="";
-                        or = new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString();
-                        and = new StringBuilder().append(entry.getValue().charAt(valueLength-3)).append(entry.getValue().charAt(valueLength-2)).append(entry.getValue().charAt(valueLength-1)).toString();
-                        
+                        and = new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString();
+                        or = new StringBuilder().append(entry.getValue().charAt(valueLength-3)).append(entry.getValue().charAt(valueLength-2)).append(entry.getValue().charAt(valueLength-1)).toString();
+                        if(and != ","|| or!= " ou")
+                            names = cleanArrayList(constructNameReq(entry.getValue()+","));
+                        else
+                            names = cleanArrayList(constructNameReq(entry.getValue()));
+
+                        first = names.get(0);
                         for(int i=0; i<names.size(); i++){
-                            /*if(and != ","|| or!= " ou")
-                                chars += */
-                            
-                            System.out.println(first);
+
                             if(names.get(i).equals(",") || names.get(i).equals("ou") || i == names.size()-1){
-                                System.out.println("inside");
                                 last = names.get(i-1);
-                                chars += "SELECT nom, prenom FROM personnes join generique on generique.id_personne = personnes.id_personne where (nom LIKE '" + first + "%' AND nom LIKE '%"+ last + "') OR (prenom LIKE '" + first +"%' AND nom LIKE '%"+ last + "'and generique.role='R')";
-                                if(names.get(i).equals(","))
-                                    chars+= " INTERSECT ";
-                                if(names.get(i).equals("ou"))
-                                    chars += " UNION ";
-                            }
+                                chars += "SELECT nom, prenom FROM personnes join generique on generique.id_personne = personnes.id_personne where (nom LIKE '" + first + "%' AND nom LIKE '%"+ last + "') OR (prenom LIKE '" + first +"%' AND nom LIKE '%"+ last + "')and generique.role='R'";
+
+                                if(i != names.size()-1)
+                                    first = names.get(i+1);
+                                number++;
+                            }else
+                                number=0;
                             last="";
                               
                         }
@@ -147,25 +149,23 @@ public class RechercheFilm {
                     break;
 
                 case "AVEC":
-                    ArrayList<String> names = constructNameReq(entry.getValue());
-                    String first = "", last= "", and="", or="";
+                    names = constructNameReq(entry.getValue());
                     or = new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString();
                     and = new StringBuilder().append(entry.getValue().charAt(valueLength-3)).append(entry.getValue().charAt(valueLength-2)).append(entry.getValue().charAt(valueLength-1)).toString();
-                    
+                    if(and != ","|| or!= " ou")
+                        names = cleanArrayList(constructNameReq(entry.getValue()+","));
+                    else
+                        names = cleanArrayList(constructNameReq(entry.getValue()));
                     for(int i=0; i<names.size(); i++){
-                        /*if(and != ","|| or!= " ou")
-                            chars += */
-                        
-                        System.out.println(first);
+
                         if(names.get(i).equals(",") || names.get(i).equals("ou") || i == names.size()-1){
-                            System.out.println("inside");
                             last = names.get(i-1);
-                            chars += "SELECT nom, prenom FROM personnes join generique on generique.id_personne = personnes.id_personne where (nom LIKE '" + first + "%' AND nom LIKE '%"+ last + "') OR (prenom LIKE '" + first +"%' AND nom LIKE '%"+ last + "'and generique.role='A')";
-                            if(names.get(i).equals(","))
-                                chars+= " INTERSECT ";
-                            if(names.get(i).equals("ou"))
-                                chars += " UNION ";
-                        }
+                            chars += "SELECT id_film FROM personnes join generique on generique.id_personne = personnes.id_personne where (nom LIKE '" + first + "%' AND nom LIKE '%"+ last + "') OR (prenom LIKE '" + first +"%' AND nom LIKE '%"+ last + "')and generique.role='A'";
+                            if(i != names.size()-1)
+                                first = names.get(i+1);
+                            number++;
+                        }else
+                            number=0;
                         last="";
                         
                     }
@@ -198,14 +198,7 @@ public class RechercheFilm {
                                 errors.add("Et inclusif sur deux pays");
                                 
                         }
-                    }
-                    if(new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString().equals(","))
-                        chars+= " INTERSECT ";
-                    else if(new StringBuilder().append(entry.getValue().charAt(valueLength-3)).append(entry.getValue().charAt(valueLength-2)).append(entry.getValue().charAt(valueLength-1)).toString().equals(" ou"))
-                        chars += " UNION ";
-                    else //on met une intersection par défaut 
-                        chars += " INTERSECT ";
-                    break;
+                    }break;
 
                 case "EN":
                     if((new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString()).equals(",") && (entry.getValue().length() - entry.getValue().replace(",", "").length()) == 1)
@@ -235,14 +228,7 @@ public class RechercheFilm {
                                 errors.add("Et inclusif sur deux dates");
                                 
                         }
-                    }
-                    if(new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString().equals(","))
-                        chars+= " INTERSECT ";
-                    else if(new StringBuilder().append(entry.getValue().charAt(valueLength-3)).append(entry.getValue().charAt(valueLength-2)).append(entry.getValue().charAt(valueLength-1)).toString().equals(" ou"))
-                        chars += " UNION ";
-                    else //on met une intersection par défaut 
-                        chars += " INTERSECT ";
-                    break;
+                    }break;
 
                 case "AVANT":
                     if((new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString()).equals(",") && (entry.getValue().length() - entry.getValue().replace(",", "").length()) == 1)
@@ -274,14 +260,7 @@ public class RechercheFilm {
                                 }
                             }
                         }
-                    }
-                    if(new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString().equals(","))
-                        chars+= " INTERSECT ";
-                    else if(new StringBuilder().append(entry.getValue().charAt(valueLength-3)).append(entry.getValue().charAt(valueLength-2)).append(entry.getValue().charAt(valueLength-1)).toString().equals(" ou"))
-                        chars += " UNION ";
-                    else //on met une intersection par défaut 
-                        chars += " INTERSECT ";
-                    break;
+                    }break;
 
                 case "APRES": 
                     if((new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString()).equals(",") && (entry.getValue().length() - entry.getValue().replace(",", "").length()) == 1)
@@ -314,14 +293,14 @@ public class RechercheFilm {
                             }
                            
                         }
-                    }
-                    if(new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString().equals(","))
-                        chars+= " INTERSECT ";
-                    else if(new StringBuilder().append(entry.getValue().charAt(valueLength-3)).append(entry.getValue().charAt(valueLength-2)).append(entry.getValue().charAt(valueLength-1)).toString().equals(" ou"))
-                        chars += " UNION ";
-                    else //on met une intersection par défaut 
-                        chars += " INTERSECT ";
-                    break;
+                    }break;
+                    default: 
+                        if(new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString().equals(","))
+                            chars+= " INTERSECT ";
+                        else if(new StringBuilder().append(entry.getValue().charAt(valueLength-3)).append(entry.getValue().charAt(valueLength-2)).append(entry.getValue().charAt(valueLength-1)).toString().equals(" ou"))
+                            chars += " UNION ";
+                        else //on met une intersection par défaut 
+                            chars += " INTERSECT ";
             }
 
         }
@@ -354,8 +333,18 @@ public class RechercheFilm {
         }
         
         return names;
-    
-  
+
+    }
+
+    public ArrayList<String> cleanArrayList(ArrayList<String> list){
+        Iterator<String> it = list.iterator();
+            while (it.hasNext())
+            {
+                if (it.next().equals(" "))
+                    it.remove();
+                
+            }
+            return list;
     }
 
 }

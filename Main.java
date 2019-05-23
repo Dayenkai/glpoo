@@ -4,7 +4,7 @@ public class Main {
     public static void main(String[] args) {
         RechercheFilm uneRecherche = new RechercheFilm("bdfilm");
         //Quand on a pas d'informations sur la transition entre le keyword suivant, on met un ou ?
-        uneRecherche.retrouve("titre jojo");
+        uneRecherche.retrouve("titre ");
 
         long debut = System.currentTimeMillis();
 

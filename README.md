@@ -10,4 +10,5 @@ Tests à exécuter sur la véracité de pays, en, titre, avant, apres
 Vous pouvez avoir à modifier les données entrées par l'utilisateur. J'ai mentionné les accents, mais les noms commençant par Mc sont tous stockés come "Mac" dans la base pour des raisons d'affichage par ordre alphabétique. McQueen => MacQueen
 
 à gérer :
-DE Joseph Banzio DE toto riina
+DE Joseph Banzio DE toto riina (pas de , et pas de ou)
+keyword avec données vides 
