@@ -77,7 +77,13 @@ public class RechercheFilm {
 
 
     public String analyzeRequest(LinkedHashMap<String, String> user_req){
-        //StringBuilder sql_req = new StringBuilder("SELECT t.titre, ln.nom, fn.prenom, c.pays, d.duree, a.titre from films as M, personnes as P, pays as C");
+        StringBuilder sql_req = new StringBuilder("select F.titre,F.annee, F.duree, group_concat(A.titre, '|') as autres_titres,P.prenom, P.nom, G.role from filtre
+        join films f on F.id_film = filtre.id_film
+        join pays py on Py.code = F.pays
+        left join autres_titres a on A.id_film = F.id_film
+        join generique g on G.id_film = F.id_film
+        join personnes p on P.id_personne = G.id_personne
+        group by F.titre,F.annee, F.duree, P.prenom, P.nom, G.role");
         StringBuilder filter = new StringBuilder("with filtre as");
         ArrayList<String> names = new ArrayList<String>();
         String first = "", last= "", and="", or="";
@@ -85,6 +91,7 @@ public class RechercheFilm {
         String chars = "(", type="";
         String[] array;
         ArrayList<String> errors = new ArrayList<String>();
+        
         for (Map.Entry<String, String> entry : user_req.entrySet()) {
             valueLength = entry.getValue().length();
             switch(entry.getKey()){
@@ -113,14 +120,7 @@ public class RechercheFilm {
                             else
                                 errors.add("Et inclusif sur deux titres");    
                         }
-                    }
-                    /*if(new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString().equals(","))
-                        chars+= " INTERSECT ";
-                    else if(new StringBuilder().append(entry.getValue().charAt(valueLength-3)).append(entry.getValue().charAt(valueLength-2)).append(entry.getValue().charAt(valueLength-1)).toString().equals(" ou"))
-                        chars += " UNION ";
-                    else //on met une intersection par défaut 
-                        chars += " INTERSECT ";
-                    break;*/
+                    }break;
 
                 case "DE":
                         and = new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString();
@@ -144,9 +144,7 @@ public class RechercheFilm {
                                 number=0;
                             last="";
                               
-                        }
-
-                    break;
+                        }break;
 
                 case "AVEC":
                     names = constructNameReq(entry.getValue());
@@ -168,8 +166,7 @@ public class RechercheFilm {
                             number=0;
                         last="";
                         
-                    }
-                    break;
+                    }break;
 
                 case "PAYS":
                     if((new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString()).equals(",") && (entry.getValue().length() - entry.getValue().replace(",", "").length()) == 1)
@@ -294,6 +291,7 @@ public class RechercheFilm {
                            
                         }
                     }break;
+
                     default: 
                         if(new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString().equals(","))
                             chars+= " INTERSECT ";
