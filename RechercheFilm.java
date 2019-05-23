@@ -271,21 +271,18 @@ public class RechercheFilm {
         return val;
     }
     // "John Doe ou"
-    public String constructNameReq(String line){
-        String[] arr = line.split("ou");
-        
+    public String constructNameReq(String line){ 
+        String[] arr = line.split("ou|,");
+    
         ArrayList<List<String>> names= new ArrayList<List<String>>();
         
         for(String n : arr){
             names.add(Arrays.asList(n.split(" ")));
         }
 
-        if(!line.contains("ou") && !line.contains(",")){
-            
-        }
-        
-        
         return "";
-    }
+    
   
+    }
+
 }
