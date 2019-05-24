@@ -12,3 +12,5 @@ Vous pouvez avoir à modifier les données entrées par l'utilisateur. J'ai m
 à gérer :
 DE Joseph Banzio DE toto riina (pas de , et pas de ou)
 keyword avec données vides 
+
+https://stackoverflow.com/questions/14853508/returning-a-resultset

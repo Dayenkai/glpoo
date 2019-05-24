@@ -1,12 +1,9 @@
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.*;
-
-
-/***
- * 
- */
 
 //java -cp ".:sqlite-jdbc-3.27.2.1.jar" Main
 public class RechercheFilm {
@@ -18,7 +15,7 @@ public class RechercheFilm {
         try {
             String url = "jdbc:sqlite:" + nomFichierSQLite;
             _connection = DriverManager.getConnection(url);
-            System.out.println("Connection to SQLite has been established.");
+            System.out.println("Connection to SQLite has been established.\n");
 
         } catch (SQLException e) {
             System.out.println(e.getMessage());
@@ -28,6 +25,7 @@ public class RechercheFilm {
     public void fermeBase(){
         try {
             _connection.close();
+            System.out.println("The database has been closed.\n");
         }catch (SQLException e) {
             System.out.println(e.getMessage());
         }
@@ -76,7 +74,13 @@ public class RechercheFilm {
 
 
     public String analyzeRequest(LinkedHashMap<String, String> user_req){
-        StringBuilder sql_req = new StringBuilder("select F.titre,F.annee, F.duree, group_concat(A.titre, '|') as autres_titres,P.prenom, P.nom, G.role from filtre join films f on F.id_film = filtre.id_film join pays py on Py.code = F.pays left join autres_titres a on A.id_film = F.id_film join generique g on G.id_film = F.id_film join personnes p on P.id_personne = G.id_personne group by F.titre,F.annee, F.duree, P.prenom, P.nom, G.role");
+        StringBuilder sql_req = new StringBuilder("select F.titre,F.annee, F.duree, group_concat(A.titre, '|') as autres_titres,P.prenom, P.nom, G.role, Py.nom as country from filtre\n" +
+        "                                                                                                              join films f on F.id_film = filtre.id_film\n" +
+        "                                                                                                              join pays py on Py.code = F.pays\n" +
+        "                                                                                                              left join autres_titres a on A.id_film = F.id_film\n" +
+        "                                                                                                              join generique g on G.id_film = F.id_film\n" +
+        "                                                                                                              join personnes p on P.id_personne = G.id_personne\n" +
+        "group by F.titre,F.annee, F.duree, P.prenom, P.nom, G.role, F.pays "); //LIMIT 100
         StringBuilder filter = new StringBuilder("with filtre as");
         ArrayList<String> names = new ArrayList<String>();
         String first = "", last= "", and="", or="";
@@ -125,7 +129,7 @@ public class RechercheFilm {
                             names = cleanArrayList(constructNameReq(entry.getValue()));
 
                         first = names.get(0); 
-                        System.out.println(names);
+                        
                         for(int i=0; i<names.size(); i++){
                             if(names.get(i).equals(",") || names.get(i).equals("ou") || i == names.size()-1 ){
                                 last = names.get(i-1);
@@ -209,16 +213,15 @@ public class RechercheFilm {
                             if(type.equals(",") && (entry.getValue().length() - entry.getValue().replace(",", "").length()) == 1)
                                 chars += " INTERSECT "; 
                             else
-                                errors.add("Et inclusif sur deux pays");
+                                errors.add(" et inclusif sur deux pays");
                                 
                         }
                     }break;
 
                 case "EN":
-                    if(!isNumeric(entry.getValue())){
-                        errors.add("mauvaise syntaxe -> lettre dans une date");
-                        break;
-                    }
+                    if(!isNumeric(entry.getValue()))
+                        errors.add("lettre dans une date");
+
                     if((new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString()).equals(",") && (entry.getValue().length() - entry.getValue().replace(",", "").length()) == 1)
                         chars += " SELECT id_film FROM films WHERE annee=" + new StringBuilder(entry.getValue()).deleteCharAt(valueLength-1).toString() + " ";
                     if(!entry.getValue().contains("ou") && !entry.getValue().contains(","))
@@ -243,16 +246,15 @@ public class RechercheFilm {
                             if(type.equals(",") && (entry.getValue().length() - entry.getValue().replace(",", "").length()) == 1)
                                 chars += " INTERSECT ";  
                             else 
-                                errors.add("mauvaise syntaxe -> et inclusif sur deux dates");
+                                errors.add("et inclusif sur deux dates");
                                 
                         }
                     }break;
 
                 case "AVANT":
-                    if(!isNumeric(entry.getValue())){
+                    if(!isNumeric(entry.getValue()))
                         errors.add("mauvaise syntaxe -> lettre dans une date");
-                        break;
-                    }
+                    
                     if((new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString()).equals(",") && (entry.getValue().length() - entry.getValue().replace(",", "").length()) == 1)
                         chars += " SELECT id_film FROM films WHERE annee<" + new StringBuilder(entry.getValue()).deleteCharAt(valueLength-1).toString() + " ";
                     if(!entry.getValue().contains("ou") && !entry.getValue().contains(","))
@@ -285,10 +287,9 @@ public class RechercheFilm {
                     }break;
 
                 case "APRES": 
-                    if(!isNumeric(entry.getValue())){
+                    if(!isNumeric(entry.getValue()))
                         errors.add("mauvaise syntaxe -> lettre dans une date");
-                        break;
-                    }
+
                     if((new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString()).equals(",") && (entry.getValue().length() - entry.getValue().replace(",", "").length()) == 1)
                         chars += " SELECT id_film FROM films WHERE annee>" + new StringBuilder(entry.getValue()).deleteCharAt(valueLength-1).toString() + " ";
                     if(!entry.getValue().contains("ou") && !entry.getValue().contains(","))
@@ -331,17 +332,21 @@ public class RechercheFilm {
             }
 
         }
-        chars += ") " ;
-        filter.append(chars);
-        System.out.println("\n\n\n" + filter);
-        filter.append("\n\n"+sql_req);
-
+        chars += ")\n " ;
+        filter.append(chars + "\n\n" +sql_req);
+        String final_error = "{\"resultat\":";
         if(errors.size() > 0){
-            System.out.println(errors);
+            //System.out.println(errors);
+            for(String n : errors){
+                final_error += " [" + n + "], ";
+            }
+            return final_error + "}";
         }else{
-            //System.out.println("\n\n\n" + filter);
+            //System.out.println(filter.toString());
+            System.out.println(request_db(filter.toString())); //System.out.println("\n\n\n" + filter);
+            return "";
         }
-        return "";
+        
     }
 
     public String[] get(String line, String type){
@@ -361,12 +366,9 @@ public class RechercheFilm {
                 word = st.nextToken().toLowerCase();
                 names.add(i, word);
                 i++;
-            }
-            req=null;
+            }req=null;
         }
-        
         return names;
-
     }
 
     public ArrayList<String> cleanArrayList(ArrayList<String> list){
@@ -380,6 +382,56 @@ public class RechercheFilm {
 
     public static boolean isNumeric(String str) {
         return str.matches("-?\\d+(\\.\\d+)?");  //match a number with optional '-' and decimal.
-      }
+    }
+
+    public String request_db(String user_req){
+        String title="", country= "", o_title="", role="";
+        int year=0, duration=0;
+        ArrayList<NomPersonne> directors = new ArrayList<NomPersonne>(); //réalisateurs
+        ArrayList<NomPersonne> actors = new ArrayList<NomPersonne>(); //acteurs
+        ArrayList<String> o_titles = new ArrayList<>();
+        NomPersonne person = new NomPersonne("", "");
+        try{
+            _connection.setAutoCommit(false);
+            Statement statement = _connection.createStatement();
+            ResultSet result = statement.executeQuery(user_req);
+
+            while(result.next()){
+                String i_title = result.getString("TITRE");
+                int i_year = result.getInt("ANNEE");
+                int i_duration = result.getInt("DUREE");
+                String i_o_title = result.getString("AUTRES_TITRES");
+                String i_first_name = result.getString("PRENOM");
+                String i_last_name = result.getString("NOM");
+                String i_role = result.getString("ROLE");
+                String i_country = result.getString("COUNTRY");
+        
+                //System.out.println(i_title);
+                if(role.equals("A")){
+                    person = new NomPersonne(i_last_name, i_first_name);
+                    actors.add(person);
+                }else if(role.equals("R")){
+                    person = new NomPersonne(i_last_name, i_first_name);
+                    directors.add(person);
+                }
+                title = i_title;
+                o_title = i_o_title;
+                duration = i_duration;
+                country = i_country;
+                o_titles.add(i_o_title);
+
+            }
+            
+            InfoFilm final_res = new InfoFilm(title, directors, actors, country, year, duration, o_titles);
+            //System.out.println(final_res);
+            result.close();
+            statement.close();
+            return "inside the try";
+        }catch(Exception e){
+            System.err.println(e.getMessage() );
+        }
+
+        return "nique ta mère";
+    }
 
 }
