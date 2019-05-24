@@ -75,7 +75,6 @@ public class RechercheFilm {
 
 
 
-
     public String analyzeRequest(LinkedHashMap<String, String> user_req){
         StringBuilder sql_req = new StringBuilder("select F.titre,F.annee, F.duree, group_concat(A.titre, '|') as autres_titres,P.prenom, P.nom, G.role from filtre join films f on F.id_film = filtre.id_film join pays py on Py.code = F.pays left join autres_titres a on A.id_film = F.id_film join generique g on G.id_film = F.id_film join personnes p on P.id_personne = G.id_personne group by F.titre,F.annee, F.duree, P.prenom, P.nom, G.role");
         StringBuilder filter = new StringBuilder("with filtre as");
@@ -91,9 +90,9 @@ public class RechercheFilm {
             switch(entry.getKey()){
                 case "TITRE":
                     if((new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString()).equals(",") && (entry.getValue().length() - entry.getValue().replace(",", "").length()) == 1)
-                        chars += " SELECT id_film FROM recherche_titre WHERE titre MATCH '" + new StringBuilder(entry.getValue()).deleteCharAt(valueLength-1).toString() + "' ";
+                        chars += " SELECT id_film FROM recherche_titre WHERE titre MATCH '" + new StringBuilder(entry.getValue()).deleteCharAt(valueLength-1).toString() + "%' ";
                     if(!entry.getValue().contains("ou") && !entry.getValue().contains(","))
-                        chars += " SELECT id_film FROM recherche_titre WHERE titre MATCH '" + entry.getValue() + "' ";
+                        chars += " SELECT id_film FROM recherche_titre WHERE titre MATCH '" + entry.getValue() + "%' ";
                     else{ 
                         if(entry.getValue().contains("ou")){
                             type = new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString();
@@ -112,32 +111,40 @@ public class RechercheFilm {
                             if(type.equals(",") && (entry.getValue().length() - entry.getValue().replace(",", "").length()) == 1)
                                 chars += " INTERSECT "; 
                             else
-                                errors.add("Et inclusif sur deux titres");    
+                                errors.add("mauvaise syntaxe -> et entre deux titres");    
                         }
                     }break;
 
                 case "DE":
                         and = new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString();
                         or = new StringBuilder().append(entry.getValue().charAt(valueLength-3)).append(entry.getValue().charAt(valueLength-2)).append(entry.getValue().charAt(valueLength-1)).toString();
-                        if(and != ","|| or!= " ou")
-                            names = cleanArrayList(constructNameReq(entry.getValue()+","));
+                        System.out.println(or + " " + and + "\n");
+                        if(!and.equals(",") && !or.equals(" ou"))
+                            names = cleanArrayList(constructNameReq(entry.getValue() + " @"));
                         else
                             names = cleanArrayList(constructNameReq(entry.getValue()));
 
-                        first = names.get(0);
+                        first = names.get(0); 
+                        System.out.println(names);
                         for(int i=0; i<names.size(); i++){
-
-                            if(names.get(i).equals(",") || names.get(i).equals("ou") || i == names.size()-1){
+                            if(names.get(i).equals(",") || names.get(i).equals("ou") || i == names.size()-1 ){
                                 last = names.get(i-1);
-                                chars += "SELECT nom, prenom FROM personnes join generique on generique.id_personne = personnes.id_personne where (nom LIKE '" + first + "%' AND nom LIKE '%"+ last + "') OR (prenom LIKE '" + first +"%' AND nom LIKE '%"+ last + "')and generique.role='R'";
                                 
-                                if(names.get(i).equals(","))
-                                    chars += " INTERSECT ";
+                                chars += (first == last) ? " SELECT id_film FROM personnes join generique on generique.id_personne = personnes.id_personne where nom LIKE '" + first + "%' and generique.role='R' " : " SELECT id_film FROM personnes join generique on generique.id_personne = personnes.id_personne where (nom LIKE '" + first + "%' AND prenom LIKE '%"+ last + "') OR (prenom LIKE '" + first +"%' AND nom LIKE '%"+ last + "')and generique.role='R' ";
+                                if(i != names.size()-1 )
+                                    first = names.get(i+1);
+
+                                System.out.println("Tour de boucle n°" + i);
+                                System.out.println("Valeur de first : " + first);
+                                System.out.println("Valeur de last : " + last);
                                 if(names.get(i).equals("ou"))
                                     chars += " UNION ";  
-                                if(i != names.size()-1)
-                                    first = names.get(i+1);
+                                if(names.get(i).equals(","))
+                                    chars += " INTERSECT ";
+                                else if(i == names.size()-1)
+                                    break;
                                 number++;
+
                             }else
                                 number=0;
                             last="";
@@ -145,24 +152,31 @@ public class RechercheFilm {
                         }break;
 
                 case "AVEC":
+
                     names = constructNameReq(entry.getValue());
                     or = new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString();
                     and = new StringBuilder().append(entry.getValue().charAt(valueLength-3)).append(entry.getValue().charAt(valueLength-2)).append(entry.getValue().charAt(valueLength-1)).toString();
                     if(and != ","|| or!= " ou")
-                        names = cleanArrayList(constructNameReq(entry.getValue()+","));
+                        names = cleanArrayList(constructNameReq(entry.getValue()+""));
                     else
                         names = cleanArrayList(constructNameReq(entry.getValue()));
-                    for(int i=0; i<names.size(); i++){
 
+                    first = names.get(0);
+                    for(int i=0; i<names.size(); i++){
                         if(names.get(i).equals(",") || names.get(i).equals("ou") || i == names.size()-1){
                             last = names.get(i-1);
-                            chars += "SELECT id_film FROM personnes join generique on generique.id_personne = personnes.id_personne where (nom LIKE '" + first + "%' AND nom LIKE '%"+ last + "') OR (prenom LIKE '" + first +"%' AND nom LIKE '%"+ last + "')and generique.role='A'";
-                            if(names.get(i).equals(","))
-                                chars += " INTERSECT ";
+
+                            chars += (first == last) ? " SELECT id_film FROM personnes join generique on generique.id_personne = personnes.id_personne where nom LIKE '" + first + "%' AND generique.role='A'" : " SELECT id_film FROM personnes join generique on generique.id_personne = personnes.id_personne where (nom LIKE '" + first + "%' AND prenom LIKE '%"+ last + "') OR (prenom LIKE '" + first +"%' AND nom LIKE '%"+ last + "')and generique.role='A' ";
+
                             if(names.get(i).equals("ou"))
                                 chars += " UNION ";  
                             if(i != names.size()-1)
                                 first = names.get(i+1);
+                            if(names.get(i).equals(","))
+                                chars += " INTERSECT ";
+                            else if(i == names.size()-1)
+                                    break;
+
                             number++;
                         }else
                             number=0;
@@ -200,6 +214,11 @@ public class RechercheFilm {
                     }break;
 
                 case "EN":
+
+                    if(!isNumeric(entry.getValue())){
+                        errors.add("mauvaise syntaxe -> lettre dans une date");
+                        break;
+                    }
                     if((new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString()).equals(",") && (entry.getValue().length() - entry.getValue().replace(",", "").length()) == 1)
                         chars += " SELECT id_film FROM films WHERE annee=" + new StringBuilder(entry.getValue()).deleteCharAt(valueLength-1).toString() + " ";
                     if(!entry.getValue().contains("ou") && !entry.getValue().contains(","))
@@ -224,12 +243,16 @@ public class RechercheFilm {
                             if(type.equals(",") && (entry.getValue().length() - entry.getValue().replace(",", "").length()) == 1)
                                 chars += " INTERSECT ";  
                             else 
-                                errors.add("Et inclusif sur deux dates");
+                                errors.add("mauvaise syntaxe -> et inclusif sur deux dates");
                                 
                         }
                     }break;
 
                 case "AVANT":
+                    if(!isNumeric(entry.getValue())){
+                        errors.add("mauvaise syntaxe -> lettre dans une date");
+                        break;
+                    }
                     if((new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString()).equals(",") && (entry.getValue().length() - entry.getValue().replace(",", "").length()) == 1)
                         chars += " SELECT id_film FROM films WHERE annee<" + new StringBuilder(entry.getValue()).deleteCharAt(valueLength-1).toString() + " ";
                     if(!entry.getValue().contains("ou") && !entry.getValue().contains(","))
@@ -306,8 +329,14 @@ public class RechercheFilm {
         }
         chars += ") " ;
         filter.append(chars);
-        System.out.println("\n\n\n" + filter.toString());
-        
+        System.out.println("\n\n\n" + filter);
+        filter.append("\n\n"+sql_req);
+
+        if(errors.size() > 0){
+            System.out.println(errors);
+        }else{
+            //System.out.println("\n\n\n" + filter);
+        }
         return "";
     }
 
@@ -341,10 +370,12 @@ public class RechercheFilm {
             while (it.hasNext())
             {
                 if (it.next().equals(" "))
-                    it.remove();
-                
-            }
-            return list;
+                    it.remove();     
+            }return list;
     }
+
+    public static boolean isNumeric(String str) {
+        return str.matches("-?\\d+(\\.\\d+)?");  //match a number with optional '-' and decimal.
+      }
 
 }
