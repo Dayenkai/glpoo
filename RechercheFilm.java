@@ -6,7 +6,7 @@ import java.sql.Statement;
 import java.util.*;
 
 /***
- * @author Joseph-Emmanuel Banzio
+ * @author Joseph-Emmanuel Banzio Beker Bawilu
  * Classe RechercheFilm permettant d'effectuer une recherche sur un film en particulier en fonction de mots clés
  */
 
