@@ -5,10 +5,19 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.*;
 
-//java -cp ".:sqlite-jdbc-3.27.2.1.jar" Main
+/***
+ * @author Joseph-Emmanuel Banzio
+ * Classe RechercheFilm permettant d'effectuer une recherche sur un film en particulier en fonction de mots clés
+ */
+
 public class RechercheFilm {
     private Connection _connection;
     private String[] _keywords = {"TITRE", "DE", "AVEC", "PAYS", "EN", "AVANT", "APRES"};
+
+    /**
+     * Constructeur
+     * @param nomFichierSQLite
+     */
 
     public RechercheFilm(String nomFichierSQLite){
         _connection = null;
@@ -21,7 +30,9 @@ public class RechercheFilm {
             System.out.println(e.getMessage());
         }
     }
-    
+    /**
+     * 
+     */
     public void fermeBase(){
         try {
             _connection.close();
@@ -31,6 +42,15 @@ public class RechercheFilm {
         }
     }
 
+    /**
+     * Retourne la réponse de la requête utilisateur sous le format JSON
+     * La fonction parcourt la chaine de caractères et effectue progressivement son traitement
+     * => Si c'est un keyword, il sera stocké comme clé d'une LinkedHashMap pour conserver l'ordre d'insertion
+     * => Sinon, il stocke la donnée comme valeur correspondante à la clé
+     * @param requete chaine de caractères contenant la requête utilisateur (ex: titre avengers)
+     * @return réponse à la requête soit un resultat soit une erreur
+     */
+
     public String retrouve(String requete){
         LinkedHashMap<String, String> data = new LinkedHashMap<String, String>();
         String word = "";
@@ -39,7 +59,7 @@ public class RechercheFilm {
        
         for(int i=0; i<requete.length(); i++){
             if(requete.trim().length() == 0)
-                return "{\"errors\": [ne contient que des espaces] }";
+                return "{\"erreurs\": [ne contient que des espaces] }";
             if(requete.charAt(i) == ' '){
                 word = word.toUpperCase();
 
@@ -72,7 +92,14 @@ public class RechercheFilm {
         return analyzeRequest(data);
     }
 
-
+    /***
+     * La fonction prend la hashmap qu'elle parcourt du premier au dernier élément inséré 
+     * pour éviter que les liens (ou et ,) ne soient pas pris en compte
+     * Elle construit progressivement le filtre selon les clés de la hashmap 
+     * Elle fait ensuite appel à la fonction requestDB()
+     * @param user_req requête utilisateur sous la format d'une linkedhashmap
+     * @return le string retourné par requestDB()
+     */
 
     public String analyzeRequest(LinkedHashMap<String, String> user_req){
         StringBuilder sql_req = new StringBuilder("select F.titre,F.annee, F.duree, group_concat(A.titre, '|') as autres_titres,P.prenom, P.nom, G.role, Py.nom as country from filtre\n" +
@@ -81,7 +108,7 @@ public class RechercheFilm {
         "                                                                                                              left join autres_titres a on A.id_film = F.id_film\n" +
         "                                                                                                              join generique g on G.id_film = F.id_film\n" +
         "                                                                                                              join personnes p on P.id_personne = G.id_personne\n" +
-        "group by F.titre,F.annee, F.duree, P.prenom, P.nom, G.role, F.pays "); //LIMIT 100
+        "group by F.titre,F.annee, F.duree, P.prenom, P.nom, G.role, F.pays ");
         StringBuilder filter = new StringBuilder("with filtre as");
         ArrayList<String> names = new ArrayList<String>();
         String first = "", last= "", and="", or="", dataName="";
@@ -95,9 +122,9 @@ public class RechercheFilm {
             switch(entry.getKey()){
                 case "TITRE":
                     if((new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString()).equals(",") && (entry.getValue().length() - entry.getValue().replace(",", "").length()) == 1)
-                        chars += " SELECT id_film FROM recherche_titre WHERE titre MATCH \"" + new StringBuilder(entry.getValue()).deleteCharAt(valueLength-1).toString() + "%\" ";
+                        chars += " SELECT id_film FROM recherche_titre WHERE titre MATCH \"" + new StringBuilder(entry.getValue()).deleteCharAt(valueLength-1).toString() + "\" "; 
                     if(!entry.getValue().contains("ou") && !entry.getValue().contains(","))
-                        chars += " SELECT id_film FROM recherche_titre WHERE titre MATCH \"" + entry.getValue() + "%\" ";
+                        chars += " SELECT id_film FROM recherche_titre WHERE titre MATCH \"" + entry.getValue() + "\" ";
                     else{ 
                         if(entry.getValue().contains("ou")){
                             type = new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString();
@@ -323,9 +350,7 @@ public class RechercheFilm {
                                 for(int i = 0; i<array.length; i++){
                                     chars += (i==0) ? " SELECT id_film FROM films WHERE annee>" + array[i] + " "  : "INTERSECT SELECT id_film FROM films WHERE annee>" + array[i] + " ";
                                 }
-
                             }
-                           
                         }
                     }break;
   
@@ -334,7 +359,7 @@ public class RechercheFilm {
                             chars+= " INTERSECT ";
                         else if(new StringBuilder().append(entry.getValue().charAt(valueLength-3)).append(entry.getValue().charAt(valueLength-2)).append(entry.getValue().charAt(valueLength-1)).toString().equals(" ou"))
                             chars += " UNION ";
-                        else //on met une intersection par défaut 
+                        else 
                             chars += " INTERSECT ";
             }
 
@@ -343,25 +368,36 @@ public class RechercheFilm {
         filter.append(chars + "\n\n" +sql_req);
         String final_error = "{\"errors\":";
         if(errors.size() > 0){
-            //System.out.println(errors);
             for(String n : errors){
                 final_error += " [" + n + "] ";
                 final_error += (errors.size() > 1) ? ",": "";
             }
             return final_error + "}";
-        }else{
-            //System.out.println(filter.toString());
-            System.out.println(request_db(filter.toString())); //System.out.println("\n\n\n" + filter);
-            return "";
-        }
+        }else
+            return requestDB(filter.toString());
+        
         
     }
+
+    /***
+     * Permet de split selon un séparateur
+     * @param line chaine de caractères qui correspond à la valeur de la hashmap
+     * @param type séparateur (ou ,)
+     * @return tableau de string
+     */
 
     public String[] get(String line, String type){
         String[] val = (type.equals("ou")) ? line.split("ou") : line.split(",");   
         return val;
     }
    
+    /***
+    * Permet de spliter l'information quand l'utilisateur saisit "de" ou "avec"
+    * Permet donc de gérer les noms dans le cas de n termes
+    * @param req chaine de caractères qui correspond à la valeur de la hashmap
+    * @return une arraylist de string qui contient tous les noms qui ont été splité
+    */
+
     public ArrayList<String> constructNameReq(String req){ 
         StringTokenizer st;
         int i=0;
@@ -369,7 +405,7 @@ public class RechercheFilm {
         ArrayList<String> names = new ArrayList<String>();
         
         while ((line = req) != null) {
-            st = new StringTokenizer(line, ", ", true); //ou
+            st = new StringTokenizer(line, ", ", true);
             while (st.hasMoreTokens()) {
                 word = st.nextToken().toLowerCase();
                 names.add(i, word);
@@ -378,6 +414,13 @@ public class RechercheFilm {
         }
         return names;
     }
+    
+    /***
+     * Permet de vérifier si une arraylist ne contient pas d'espaces
+     * Dans le cas où elle contient des espaces, elle les supprime
+     * @param list liste de noms qui ont été splité auparavant
+     * @return une arraylist de string sans espaces comme paramètres
+     */
 
     public ArrayList<String> cleanArrayList(ArrayList<String> list){
         Iterator<String> it = list.iterator();
@@ -388,67 +431,97 @@ public class RechercheFilm {
             }return list;
     }
 
+    /***
+     * Vérifie si la chaine de caractères envoyée est une valeur numérique ou non avec les expressions régulières
+     * 
+     * @param str chaine de caractères à vérifier
+     * @return true ou false selon l'issue
+     */
     public static boolean isNumeric(String str) {
-        return str.matches("-?\\d+(\\.\\d+)?");  //match a number with optional '-' and decimal.
+        return str.matches("-?\\d+(\\.\\d+)?");  
     }
 
-    public String request_db(String user_req){
-        String title="", country= "";
-        int year=0, duration=0;
-        ArrayList<NomPersonne> directors = new ArrayList<NomPersonne>(); //réalisateurs
-        ArrayList<NomPersonne> actors = new ArrayList<NomPersonne>(); //acteurs
-        ArrayList<String> o_titles = new ArrayList<>();
-        NomPersonne person = new NomPersonne("", "");
-        ArrayList<String> datas = new ArrayList<String>();
-        System.out.println(user_req);
+    /***
+     * Interagit avec la base de données en effectuant la requête qui a été construite
+     * On caste le résultat de la requête pour ensuite créer des instances de InfoFilm dans un try{}catch
+     * On construit ici progressivement le résultat sous le format JSON avec la méthode toString() de InfoFilm
+     * On fait également en sorte que la valeur de retour ne contient que les films totalement complétés
+     * @param user_req requête SQL complète de l'utilisateur avec le filtre
+     * @return réponse sous format JSON
+     * @throws Exception liée à SQL
+     */
+
+    public String requestDB(String user_req){
+        String title="", country= "",  resReq = "{\"resultat:\" ", o_title="";
+        int year=0, duration=0, i=0, movieLimit=0;
+        ArrayList<NomPersonne> directors = new ArrayList<NomPersonne>() ; 
+        ArrayList<NomPersonne> actors = new ArrayList<NomPersonne>();
+        ArrayList<String> o_titles = new ArrayList<String>();
         try (
-            
             Statement statement = _connection.createStatement();
             ResultSet rs = statement.executeQuery(user_req);
         ) {
 
+            while (rs.next()) {
+                if(!title.equals(null) && !(rs.getString("TITRE").equals(title))){
+                    InfoFilm movie = new InfoFilm(title, directors, actors, country, year, duration, o_titles);
+                    resReq += "\n" + movie.toString() ;
+                   
 
-            while ( rs.next() ) {
-
-                String i_title = rs.getString("TITRE");
-                int i_year = rs.getInt("ANNEE");
-                int g_duree = rs.getInt("DUREE");
-                String i_o_title = rs.getString("AUTRES_TITRES");
-                String firstname = "";
-                String lastname = "";
-                String role = rs.getString("ROLE");
-                String g_pays = rs.getString("COUNTRY");
-
+                    directors = new ArrayList<NomPersonne>();
+                    actors = new ArrayList<NomPersonne>();
+                    o_titles = new ArrayList<String>();
+                    i=0;
+                    movieLimit++;
+                    
+                    if(movieLimit==100)
+                        break;
+                    else
+                        resReq += ",";     
+                }
+                String lastname = "", firstname = "", role = "";
+                title = rs.getString("TITRE");
+                year = rs.getInt("ANNEE");
+                duration = rs.getInt("DUREE");
+                o_title = rs.getString("AUTRES_TITRES");
+                role = rs.getString("ROLE");
+                country = rs.getString("COUNTRY");
 
                 
+                o_titles.add(o_title);
 
-                if (role.equals("A")){
-                    person =new NomPersonne(lastname, firstname);
-                    actors.add(person);
-                }else if (role.equals("R")){
-                    person =new NomPersonne(lastname, firstname);
-                    directors.add(person);
+                if(!rs.getString("NOM").equals(null))
+                   lastname = rs.getString("NOM");
+                if(!rs.getString("PRENOM").equals(null))
+                   firstname = rs.getString("PRENOM");
+            
+                
+                if(role.equals("A"))
+                    actors.add(new NomPersonne(lastname, firstname));
+                if(role.equals("R"))
+                    directors.add(new NomPersonne(lastname, firstname));
+
+                if(!rs.getString("AUTRES_TITRES").equals(null)){
+                    ArrayList<String> o_movies = new ArrayList<String>(Arrays.asList(rs.getString("AUTRES_TITRES").split("%")));
+
+                    for(int cp=0; cp < o_movies.size(); cp++){
+                        if(i==0)
+                            o_titles.add(o_movies.get(cp));
+                    }
+                    i++;
                 }
 
-                title=i_title;
-                year=i_year;
-                duration=g_duree;
-                country=g_pays;
-                o_titles.add(i_o_title);
-
-                InfoFilm movie = new InfoFilm(title, directors, actors, country, year, duration, o_titles);
-                datas.add(movie.toString());
-             
+            }if(!title.equals(null) && movieLimit!=100){
+                InfoFilm res = new InfoFilm(title, directors, actors, country, year, duration, o_titles);
+                movieLimit++;
+                resReq += "\n" +res.toString() ;
             }
-        
-            rs.close();
-            statement.close();
-        }catch ( Exception e ) {
-            System.err.println( e.getClass().getName() + ": " + e.getMessage() );
-        }
-        for(String n : datas){
-           System.out.println(n + "\n\n");
-        }
-        return datas.toString();
+
+            resReq +=  (movieLimit == 100) ? "], \"info:\" 100 FILMS" : "]}";
+
+            } catch ( Exception e ) {
+                System.err.println( e.getMessage() );
+            }
+        return resReq + "\n";
     }
 }
