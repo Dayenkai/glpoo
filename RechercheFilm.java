@@ -16,6 +16,7 @@ public class RechercheFilm {
 
     /**
      * Constructeur
+     * Ouvre la base
      * @param nomFichierSQLite
      */
 
@@ -31,7 +32,7 @@ public class RechercheFilm {
         }
     }
     /**
-     * 
+     * Permet de fermer la base de données
      */
     public void fermeBase(){
         try {
