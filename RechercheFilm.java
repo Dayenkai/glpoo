@@ -38,6 +38,8 @@ public class RechercheFilm {
         requete +=" ";
        
         for(int i=0; i<requete.length(); i++){
+            if(requete.trim().length() == 0)
+                return "{\"errors\": [ne contient que des espaces] }";
             if(requete.charAt(i) == ' '){
                 word = word.toUpperCase();
 
@@ -55,8 +57,7 @@ public class RechercheFilm {
                    data.replace(tKey, data.get(tKey), data.get(tKey) + " " + word.replaceAll("\\s+", ""));
                    actualKey = "";
                   
-
-                }else{
+                }else{ 
                     word = word.toLowerCase();
                     if(data.get(actualKey) != null)
                         data.replace(actualKey, data.get(actualKey), data.get(actualKey) + " " + word.replaceAll("\\s+", ""));
@@ -83,7 +84,7 @@ public class RechercheFilm {
         "group by F.titre,F.annee, F.duree, P.prenom, P.nom, G.role, F.pays "); //LIMIT 100
         StringBuilder filter = new StringBuilder("with filtre as");
         ArrayList<String> names = new ArrayList<String>();
-        String first = "", last= "", and="", or="";
+        String first = "", last= "", and="", or="", dataName="";
         int valueLength = 0, number = 0;
         String chars = "(", type="";
         String[] array;
@@ -94,16 +95,16 @@ public class RechercheFilm {
             switch(entry.getKey()){
                 case "TITRE":
                     if((new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString()).equals(",") && (entry.getValue().length() - entry.getValue().replace(",", "").length()) == 1)
-                        chars += " SELECT id_film FROM recherche_titre WHERE titre MATCH '" + new StringBuilder(entry.getValue()).deleteCharAt(valueLength-1).toString() + "%' ";
+                        chars += " SELECT id_film FROM recherche_titre WHERE titre MATCH \"" + new StringBuilder(entry.getValue()).deleteCharAt(valueLength-1).toString() + "%\" ";
                     if(!entry.getValue().contains("ou") && !entry.getValue().contains(","))
-                        chars += " SELECT id_film FROM recherche_titre WHERE titre MATCH '" + entry.getValue() + "%' ";
+                        chars += " SELECT id_film FROM recherche_titre WHERE titre MATCH \"" + entry.getValue() + "%\" ";
                     else{ 
                         if(entry.getValue().contains("ou")){
                             type = new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString();
                             array = (type.equals(",")) ? get((new StringBuilder(entry.getValue()).deleteCharAt(valueLength-1).toString()).toString(), "ou") : get(entry.getValue(), "ou");
                             
                             for(int i = 0; i<array.length; i++){
-                                chars += (i==0) ? " SELECT id_film FROM recherche_titre WHERE titre MATCH '" + array[i] + "' " : "UNION SELECT id_film FROM recherche_titre WHERE titre MATCH '" + array[i] + "'";
+                                chars += (i==0) ? " SELECT id_film FROM recherche_titre WHERE titre MATCH \"" + array[i] + "\" " : "UNION SELECT id_film FROM recherche_titre WHERE titre MATCH \"" + array[i] + "\"";
                             }
 
                             type = new StringBuilder().append(entry.getValue().charAt(valueLength-3)).append(entry.getValue().charAt(valueLength-2)).append(entry.getValue().charAt(valueLength-1)).toString();
@@ -115,18 +116,21 @@ public class RechercheFilm {
                             if(type.equals(",") && (entry.getValue().length() - entry.getValue().replace(",", "").length()) == 1)
                                 chars += " INTERSECT "; 
                             else
-                                errors.add("mauvaise syntaxe -> et entre deux titres");    
+                                errors.add("et entre deux titres");    
                         }
                     }break;
 
                 case "DE":
-                        and = new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString();
-                        or = new StringBuilder().append(entry.getValue().charAt(valueLength-3)).append(entry.getValue().charAt(valueLength-2)).append(entry.getValue().charAt(valueLength-1)).toString();
+                        dataName = entry.getValue(); 
+                        if(new StringBuilder().append(dataName.charAt(0)).append(dataName.charAt(1)).toString() == "mc")
+                            dataName = new StringBuilder(dataName).insert(1, "a").toString();
+                        and = new StringBuilder().append(dataName.charAt(valueLength-1)).toString();
+                        or = new StringBuilder().append(dataName.charAt(valueLength-3)).append(dataName.charAt(valueLength-2)).append(dataName.charAt(valueLength-1)).toString();
 
                         if(!and.equals(",") && !or.equals(" ou"))
-                            names = cleanArrayList(constructNameReq(entry.getValue() + " @"));
+                            names = cleanArrayList(constructNameReq(dataName + " @"));
                         else
-                            names = cleanArrayList(constructNameReq(entry.getValue()));
+                            names = cleanArrayList(constructNameReq(dataName));
 
                         first = names.get(0); 
                         
@@ -134,7 +138,7 @@ public class RechercheFilm {
                             if(names.get(i).equals(",") || names.get(i).equals("ou") || i == names.size()-1 ){
                                 last = names.get(i-1);
                                 
-                                chars += (first.equals(last)) ? " SELECT id_film FROM personnes join generique on generique.id_personne = personnes.id_personne where nom LIKE '" + first + "%' and generique.role='R' " : " SELECT id_film FROM personnes join generique on generique.id_personne = personnes.id_personne where (nom LIKE '" + first + "%' AND prenom LIKE '%"+ last + "') OR (prenom LIKE '" + first +"%' AND nom LIKE '%"+ last + "')and generique.role='R' ";
+                                chars += (first.equals(last)) ? " SELECT id_film FROM personnes join generique on generique.id_personne = personnes.id_personne where nom LIKE \"" + first + "%\" and generique.role='R' " : " SELECT id_film FROM personnes join generique on generique.id_personne = personnes.id_personne where (nom LIKE \"" + first + "%\" AND prenom LIKE \"%"+ last + "\") OR (prenom LIKE \"" + first +"%\" AND nom LIKE \"%"+ last + "\")and generique.role='R' ";
                                 if(i != names.size()-1 )
                                     first = names.get(i+1);
 
@@ -153,21 +157,24 @@ public class RechercheFilm {
                         }break;
 
                 case "AVEC":
-                    names = constructNameReq(entry.getValue());
-                    or = new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString();
-                    and = new StringBuilder().append(entry.getValue().charAt(valueLength-3)).append(entry.getValue().charAt(valueLength-2)).append(entry.getValue().charAt(valueLength-1)).toString();
+                    dataName = entry.getValue(); 
+                    if(new StringBuilder().append(dataName.charAt(0)).append(dataName.charAt(1)).toString().equals("mc"))
+                        dataName = new StringBuilder(dataName).insert(1, "a").toString();
+
+                    or = new StringBuilder().append(dataName.charAt(valueLength-1)).toString();
+                    and = new StringBuilder().append(dataName.charAt(valueLength-3)).append(dataName.charAt(valueLength-2)).append(dataName.charAt(valueLength-1)).toString();
                     
                     if(!and.equals(",") && !or.equals(" ou"))
-                        names = cleanArrayList(constructNameReq(entry.getValue()+ " @"));
+                        names = cleanArrayList(constructNameReq(dataName+ " @"));
                     else
-                        names = cleanArrayList(constructNameReq(entry.getValue()));
+                        names = cleanArrayList(constructNameReq(dataName));
 
                     first = names.get(0);
                     for(int i=0; i<names.size(); i++){
                         if(names.get(i).equals(",") || names.get(i).equals("ou") || i == names.size()-1){
                             last = names.get(i-1);
 
-                            chars += (first == last) ? " SELECT id_film FROM personnes join generique on generique.id_personne = personnes.id_personne where nom LIKE '" + first + "%' AND generique.role='A'" : " SELECT id_film FROM personnes join generique on generique.id_personne = personnes.id_personne where (nom LIKE '" + first + "%' AND prenom LIKE '%"+ last + "') OR (prenom LIKE '" + first +"%' AND nom LIKE '%"+ last + "')and generique.role='A' ";
+                            chars += (first == last) ? " SELECT id_film FROM personnes join generique on generique.id_personne = personnes.id_personne where nom LIKE \"" + first + "%\" AND generique.role='A'" : " SELECT id_film FROM personnes join generique on generique.id_personne = personnes.id_personne where (nom LIKE \"" + first + "%\" AND prenom LIKE \"%"+ last + "\") OR (prenom LIKE \"" + first +"%\" AND nom LIKE \"%"+ last + "\")and generique.role='A' ";
 
                             if(names.get(i).equals("ou"))
                                 chars += " UNION ";  
@@ -187,20 +194,20 @@ public class RechercheFilm {
 
                 case "PAYS":
                     if(isNumeric(entry.getValue())){
-                        errors.add("mauvaise syntaxe -> chiffres dans un pays");
+                        errors.add("chiffres dans un pays");
                         break;
                     }
                     if((new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString()).equals(",") && (entry.getValue().length() - entry.getValue().replace(",", "").length()) == 1)
-                        chars += " SELECT id_film FROM films, pays where films.pays= pays.code and films.pays='"+ new StringBuilder(entry.getValue()).deleteCharAt(valueLength-1).toString() + "' OR pays.nom = '"+ new StringBuilder(entry.getValue()).deleteCharAt(valueLength-1).toString() + "' ";
+                        chars += " SELECT id_film FROM films, pays where films.pays= pays.code and films.pays LIKE\""+ new StringBuilder(entry.getValue()).deleteCharAt(valueLength-1).toString() + "\" OR pays.nom LIKE \""+ new StringBuilder(entry.getValue()).deleteCharAt(valueLength-1).toString() + "\" ";
                     if(!entry.getValue().contains("ou") && !entry.getValue().contains(","))
-                        chars += " SELECT id_film FROM films, pays where films.pays= pays.code and films.pays='" + entry.getValue() + "' OR pays.nom = '" + entry.getValue() + "' ";
+                        chars += " SELECT id_film FROM films, pays where films.pays= pays.code and films.pays LIKE \"" + entry.getValue() + "\" OR pays.nom LIKE \"" + entry.getValue() + "\" ";
                     else{
                         if(entry.getValue().contains("ou")){
                             type = new StringBuilder().append(entry.getValue().charAt(valueLength-1)).toString();
                             array = (type.equals(",")) ? get((new StringBuilder(entry.getValue()).deleteCharAt(valueLength-1).toString()).toString(), "ou") : get(entry.getValue(), "ou");
                             
                             for(int i = 0; i<array.length; i++){
-                                chars += (i==0) ? " SELECT id_film FROM films, pays where films.pays= pays.code and films.pays='" + array[i] +  "' OR pays.nom = '" + array[i] + "' "  : "UNION SELECT id_film FROM films, pays where films.pays= pays.code and films.pays='" + array[i] + "' OR pays.nom = '" + array[i] + "'";
+                                chars += (i==0) ? " SELECT id_film FROM films, pays where films.pays= pays.code and films.pays LIKE \"" + array[i] +  "\" OR pays.nom LIKE \"" + array[i] + "\" "  : "UNION SELECT id_film FROM films, pays where films.pays = pays.code and films.pays LIKE \"" + array[i] + "\" OR pays.nom  \"" + array[i] + "\"";
                             }
 
                             type = new StringBuilder().append(entry.getValue().charAt(valueLength-3)).append(entry.getValue().charAt(valueLength-2)).append(entry.getValue().charAt(valueLength-1)).toString();
@@ -334,11 +341,12 @@ public class RechercheFilm {
         }
         chars += ")\n " ;
         filter.append(chars + "\n\n" +sql_req);
-        String final_error = "{\"resultat\":";
+        String final_error = "{\"errors\":";
         if(errors.size() > 0){
             //System.out.println(errors);
             for(String n : errors){
-                final_error += " [" + n + "], ";
+                final_error += " [" + n + "] ";
+                final_error += (errors.size() > 1) ? ",": "";
             }
             return final_error + "}";
         }else{
@@ -385,53 +393,62 @@ public class RechercheFilm {
     }
 
     public String request_db(String user_req){
-        String title="", country= "", o_title="", role="";
+        String title="", country= "";
         int year=0, duration=0;
         ArrayList<NomPersonne> directors = new ArrayList<NomPersonne>(); //réalisateurs
         ArrayList<NomPersonne> actors = new ArrayList<NomPersonne>(); //acteurs
         ArrayList<String> o_titles = new ArrayList<>();
         NomPersonne person = new NomPersonne("", "");
-        try{
-            _connection.setAutoCommit(false);
+        ArrayList<String> datas = new ArrayList<String>();
+        System.out.println(user_req);
+        try (
+            
             Statement statement = _connection.createStatement();
-            ResultSet result = statement.executeQuery(user_req);
+            ResultSet rs = statement.executeQuery(user_req);
+        ) {
 
-            while(result.next()){
-                String i_title = result.getString("TITRE");
-                int i_year = result.getInt("ANNEE");
-                int i_duration = result.getInt("DUREE");
-                String i_o_title = result.getString("AUTRES_TITRES");
-                String i_first_name = result.getString("PRENOM");
-                String i_last_name = result.getString("NOM");
-                String i_role = result.getString("ROLE");
-                String i_country = result.getString("COUNTRY");
-        
-                //System.out.println(i_title);
-                if(role.equals("A")){
-                    person = new NomPersonne(i_last_name, i_first_name);
+
+            while ( rs.next() ) {
+
+                String i_title = rs.getString("TITRE");
+                int i_year = rs.getInt("ANNEE");
+                int g_duree = rs.getInt("DUREE");
+                String i_o_title = rs.getString("AUTRES_TITRES");
+                String firstname = "";
+                String lastname = "";
+                String role = rs.getString("ROLE");
+                String g_pays = rs.getString("COUNTRY");
+
+
+                
+
+                if (role.equals("A")){
+                    person =new NomPersonne(lastname, firstname);
                     actors.add(person);
-                }else if(role.equals("R")){
-                    person = new NomPersonne(i_last_name, i_first_name);
+                }else if (role.equals("R")){
+                    person =new NomPersonne(lastname, firstname);
                     directors.add(person);
                 }
-                title = i_title;
-                o_title = i_o_title;
-                duration = i_duration;
-                country = i_country;
+
+                title=i_title;
+                year=i_year;
+                duration=g_duree;
+                country=g_pays;
                 o_titles.add(i_o_title);
 
+                InfoFilm movie = new InfoFilm(title, directors, actors, country, year, duration, o_titles);
+                datas.add(movie.toString());
+             
             }
-            
-            InfoFilm final_res = new InfoFilm(title, directors, actors, country, year, duration, o_titles);
-            //System.out.println(final_res);
-            result.close();
+        
+            rs.close();
             statement.close();
-            return "inside the try";
-        }catch(Exception e){
-            System.err.println(e.getMessage() );
+        }catch ( Exception e ) {
+            System.err.println( e.getClass().getName() + ": " + e.getMessage() );
         }
-
-        return "nique ta mère";
+        for(String n : datas){
+           System.out.println(n + "\n\n");
+        }
+        return datas.toString();
     }
-
 }
