@@ -5,10 +5,10 @@ Research on a base by the general public is always delicate. There are essential
 => Form type search. This can range from minimalist, such as Hong Kong Movie Database (hkmdb.com) with a "Movie" search field and a "People" search field, to something much more advanced, such as www.europas-cinemas.org. <br />
 This project explores a third path, where the user is offered an extremely simple search syntax, allowing to carry out relatively precise searches without any knowledge of SQL. The query language is specific to the theme of the base (cinema) and has very few keywords; these can be entered in upper case, lower case, or N'imPorTe Comment. The component will take this simple input query, turn it into an SQL query, execute the query, and return the result as a string in JSON format, easy to use in a language such as Javascript or Python.<br />
 
-<h2>Le langage de recherche simplifiée </h2>
-Celui-ci s'appuie sur très peu de mots-clefs: TITRE suivi d'un titre de film <br />
-AVEC suivi d'un nom d'acteur ou d'actrice <br />
-PAYS suivi d'un code (ISO sur deux lettres) ou nom de pays <br />
-EN suivi d'une année de sortie <br />
-AVANT suivi d'une année de sortie (correspond à <, on ne traite pas <=) <br />
-APRES (ou APRÈS) suivi d'une année de sortie (correspond à >, on ne traite pas >=) <br />
+<h2> Simplified search language </h2>
+It is based on very few keywords: TITLE followed by a movie title <br />
+FOLLOWED BY ACTOR OR ACTRESS NAME <br />
+COUNTRY followed by a code (ISO on two letters) or country name <br />
+EN followed by a release year <br />
+BEFORE followed by an exit year (corresponds to , we do not process =) <br />
+APRES (or APRÈS) followed by a release year (corresponds to >, we do not process >=)<br />
